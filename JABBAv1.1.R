@@ -861,8 +861,8 @@ par(Par)
 
 cord.x <- c(years,rev(years))
 y<-rep(0,length(years))
-plot(years,(TC/1000),type="l",ylim=c(0,max((TC)*0.001)),lty=1,lwd=1.3,xlab="Year",ylab=paste("Catch ",catch.metric),main="")
-polygon(cord.x,c(TC/1000,rev(y)),col="gray",border=1,lty=1)
+plot(years,(TC),type="l",ylim=c(0,max(TC)),lty=1,lwd=1.3,xlab="Year",ylab=paste0("Catch ('000 t",catch.metric,")"),main="")
+polygon(cord.x,c(TC,rev(y)),col="gray",border=1,lty=1)
 dev.off()
 
 #------------------------------
