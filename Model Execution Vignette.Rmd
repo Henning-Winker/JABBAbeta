@@ -7,9 +7,15 @@ output:
   html_document
 fontsize: 11pt
 ---
-The code below can be used to reproduce analysis and figures from Winker et al (2018, in review), when used in conjuntion with `JABBAv1.1.R` and data from the South Atlantic Swordfish Fishery `SWO_SA`.
+The R Prime file [`SWO_SA_prime_v1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA_prime_v1.1.R) can be used to reproduce analysis and figures from Winker et al (2018, in review), when used in conjuntion with [`JABBAv1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/JABBAv1.1.R) and data from the South Atlantic Swordfish Fishery [`/SWO_SA`](https://github.com/jabbamodel/JABBA/tree/master/SWO_SA). This tutorial explains the main segments of the Prime file setup.
 
-```{r Run Simulation, eval = F, warning = F, message = F}
+
+### Getting started
+
+
+JABBA requires the installation of [R](https://cran.r-project.org/) and [JAGS](https://sourceforge.net/projects/mcmc-jags/) and the following R packages that can be directly installed within R
+
+```{r get started, eval = F, warning = F, message = F}
 ##><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><><><
 ## JABBA: Just Another Bayesian Biomass Assessment
 ## Input File for JABBA
@@ -23,6 +29,22 @@ library(rjags)
 library(R2jags)
 library("fitdistrplus")
 library(reshape)
+```
+
+### Input files
+JABBA requires a minimum of two input comma-separated value files (.csv) in the form of catch and abundance indices. The `Catch` input file contains the time series of year and catch by weight, aggregated across fleets for the entire fishery. Missing catch years or catch values are not allowed. JABBA is formulated to accommodate abundance indices from multiple sources (i.e., fleets) in a single `cpue` file, which contains all considered abundance indices.  The first column of the `cpue` input is year, which must match the range of years provided in the Catch file. In contrast to the `Catch` input, missing abundance index values are allowed, such that different abundance indices may correspond to smaller portions of the catch time series. Optionally, an additional `se` input can be passed onto JABBA, containing standard error estimates associated with the abundance indices on a log scale. The se input is a third file, structurally identical to the `cpue` input. Alternatively, this feature can be used to apply different weighting to individual abundance indices by assigning varying coefficients of variation (CV) to each time series. If such weighting is implemented, it is advised that the CV chosen for each indexed year approximates the observed standard error on the log scale, such that the data weights are congruent with expectations as to how well the model should fit these data.     
+
+The three (or two) csv files are named so that the type classifier `Catch`, `cpue` and `se` is combined with the `assessment` name. In this example, we define `assessment = SWO_SA`, so that [`catchSWO_SA.csv`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA/CatchSWO_SA.csv), [`cpueSWO_SA.csv`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA/cpueSWO_SA.csv) and [`seSWO_SA.csv`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA/seSWO_SA.csv).
+
+All input files have to be saved in a folder that is named after the `assessment`, here `/SWO_SA`. 
+
+In the Prime file:  
+`File =` requires the path where the assessment folder is stored   
+`JABBA =` requires the path where the JABBA model `JABBAv1.1.R` is located    
+`version =` determines the JABBA model version   
+`assessment =` assignes the assessment folder name  
+
+```{r Files, eval = FALSE, warning = F, message = F}
 
 #----------------------------------------------------------------
 # Setup working directories and output folder labels 
@@ -36,8 +58,13 @@ version = "v1.1"
 # Set Assessment file: assement folder within File that includes .csv input files
 assessment = "SWO_SA" 
 # add specifier for assessment (File names of outputs)
+```
 
 
+### Basic settings
+JABBA provides various Graphic, Output, Saving options that can be specified in the prime file. If not specified, JABBA will automatically use the default settings as specified on top of [`JABBAv1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/JABBAv1.1.R) code.  
+
+```{r options, eval = F, warning = F, message = F}
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 # Graphic, Output, Saving (.RData) settings 
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
@@ -56,6 +83,17 @@ catch.metric = "(t)" # Define catch input metric e.g. (tons) "000 t" etc
 save.all = FALSE # (if TRUE, a very large R object of entire posterior is saved)  
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 
+```
+
+### Looping through scenarios
+
+JABBA makes it easy to run alternative scenarios in a loop. For this purpose, a unique name has to be assgined to each scenario. For example, a generic option to do this is for 10 alternative scenarios:
+
+`Scenarios = c(paste0("Scenario",1:10))`    
+
+but individual names can be specified as well, e.g. `Scenarios = c("Run_high_r","Run_medium_r","Run_low_r")`. JABBA automatically creates a folder for each scenario, including the `Input` and `output` subfolders.  Note that the type of model `_Schaefer`, `_Fox` and `_Pella` is automatically added to the name of scenario folder.   
+
+```{r Run Scenarios, eval = FALSE, warning = F, message = F}
 
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 # Optional: Note Scenarios
@@ -91,10 +129,16 @@ for(s in 1:3){
   # Required specification for Pella-Tomlinson (Model = 3)
   BmsyK = 0.4 # Set Surplus Production curve inflection point
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>  
-  
-  #--------------------------------------------------
-  # Read csv files
-  #--------------------------------------------------
+```
+### Read input data files
+Here, the user can specify if the `se` file is available by setting `SE.I = TRUE' 
+We advice to always check if all csv files were correctly read-in.
+
+```{r Read-data, eval = FALSE, warning = F, message = F}
+
+#--------------------------------------------------
+# Read csv files
+#--------------------------------------------------
   
   # Use SEs from csv file for abudance indices (TRUE/FALSE)
   SE.I = TRUE
@@ -107,17 +151,25 @@ for(s in 1:3){
     se =  read.csv(paste0(File,"/",assessment,"/se",assessment,".csv"))
   }
   
-  names(cpue)
-  names(catch)
+  head(cpue)
+  head(catch)
   
+```
+
+### Input data manipulation
+This section is optional. For the SWO_SA example we use this section manipulate the input `cpue` and `se` data for scenarios 1-3. For sceanarios 2-3, we remove the BRA_LL1 series. For the base-case scenario 3, we use in addition seperate time series (time-blocks) for Japan (JP_LL1 & JP_LL2) and Spain (SP_LL1 & SP_LL2), which we merge back in one index for JP_1 and SP_LL1, respectively, for scenario 1-2. If `se` is provided, the same munipulations must be applied as for `cpue`.   
+Again, always check if the manilupations were correctly applied.   
+
+JABBA provides provides the option to use a single averaged CPUE index instead of the individual abundance indices (see 2.5.1. State-Space model for averaging of abundance indices in Winker et al, 2018). This feature can be activated by setting `meanCPUE = TRUE`.  
+
+
+```{r manipulate data, eval = FALSE, warning = F, message = F}
+
   #--------------------------------------------------
   # option to exclude CPUE time series or catch year
   #--------------------------------------------------
   
-  # Set up Base-Case for SWO
-  
-  
-  if(s<3){ # Combine SPA and JAPAN
+  if(s<3){ # Combine SPAIN and JAPAN
     cpue[,4] = apply(cpue[,4:5],1,mean,na.rm=TRUE)
     cpue[,6] = apply(cpue[,6:7],1,mean,na.rm=TRUE)
     
@@ -138,17 +190,29 @@ for(s in 1:3){
     cpue = cpue[,-c(2)]
     se = se[,-c(2)]
   }
-  
+
   
   names(cpue)
   ncol(catch)
   ncol(cpue)
-  
+
   #------------------------------------------------------
   # Option use mean CPUE from state-space cpue averaging
   #-----------------------------------------------------
   meanCPUE = FALSE
-  
+    
+```
+
+### Prior and Process variance settings
+Please see section *2.3.2. Prior specification* in Winker et al. (2008) for details.
+
+Most prior settings provide more than one option. For example, if K is meant to be specified as a lognormal prior set `K.dist = c("lnorm","range")[1]` or as range `K.dist = c("lnorm","range")[2]`. If the prior for K is specified as lognormal `K.prior = c(200000,1)` requires the untransformed mean K and the assumed CV, whereas if the prior for K is specified as range requires the assumed minum and maximum values, e.g. `K.prior = c(15000,1500000)`.          
+
+The r prior provides an additional option by specifying a generic resiliance category *Very low, Low, Medium* or *High* as provided by [FishBase](www.FishBase.org).   
+
+```{r Prior, eval = FALSE, warning = F, message = F}
+
+
   #------------------------------------------------
   # Prior for unfished biomass K
   #------------------------------------------------
@@ -171,12 +235,70 @@ for(s in 1:3){
   # specify as mean and CV 
   psi.prior = c(1,0.25) 
   
-  #--------------------------------------------------------------
-  # Determine estimation for catchability q and observation error 
-  #--------------------------------------------------------------
-  # Assign q to CPUE
-  sets.q = 1:(ncol(cpue)-1) 
+  #----------------------------------------------------
+  # Determine r prior
+  #----------------------------------------------------
+  # The option are: 
+  # a) Specifying a lognormal prior 
+  # b) Specifying a resiliance category after Froese et al. (2017; CMSY)
+  # Resilience: "Very low", "Low", "Medium", High" (requires r.range = TRUE)
   
+  # use [1] lognormal(mean,stdev) or [2] range (min,max) or
+  r.dist = c("lnorm","range")[1] 
+  
+  r.prior = c(0.42,0.37) 
+  
+  #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
+  # Process Error
+  #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
+  #Estimate set sigma.proc == True
+  sigma.proc = TRUE
+  # Determines if process error deviation are estimated for all years (TRUE)  
+  # or only from the point the first abundance index becomes available (FALSE)
+  proc.dev.all = FALSE 
+  #------------------------------------------
+  if(sigma.proc == TRUE){
+    igamma = c(4,0.01) #specify inv-gamma parameters
+    
+    # Process error check
+    gamma.check = 1/rgamma(1000,igamma[1],igamma[2])
+    # check mean process error + CV
+    mu.proc = sqrt(mean(gamma.check)); CV.proc =    sd(sqrt(gamma.check))/mean(sqrt(gamma.check))
+    
+    # check CV
+    round(c(mu.proc,CV.proc),3)
+    quantile(sqrt(gamma.check),c(0.1,0.9))
+  }else{
+    sigma.proc = 0.07 #IF Fixed: typicallly 0.05-0.15 (see Ono et al. 2012)
+  }
+  
+```
+
+
+```{r Run Simulation, eval = FALSE, warning = F, message = F}
+
+
+  #------------------------------------------------
+  # Prior for unfished biomass K
+  #------------------------------------------------
+  # The option are: 
+  # a) Specify as a lognormal prior with mean and CV 
+  # b) Specify as range to be converted into lognormal prior
+  
+  K.dist = c("lnorm","range")[1]
+  
+  # if lnorm use mean and CV; if range use lower,upper bound
+  K.prior = c(200000,1) 
+  
+  #-----------------------------------------------------------
+  # mean and CV and sd for Initial depletion level P1= SB/SB0
+  #-----------------------------------------------------------
+  # Set the initial depletion prior B1/K 
+  # To be converted into a lognormal prior (with upper bound at 1.1)
+  
+  psi.dist= c("lnorm","beta")[1]
+  # specify as mean and CV 
+  psi.prior = c(1,0.25) 
   
   #----------------------------------------------------
   # Determine r prior
@@ -190,6 +312,39 @@ for(s in 1:3){
   r.dist = c("lnorm","range")[1] 
   
   r.prior = c(0.42,0.37) 
+  
+  #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
+  # Process Error
+  #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
+  #Estimate set sigma.proc == True
+  sigma.proc = TRUE
+  # Determines if process error deviation are estimated for all years (TRUE)  
+  # or only from the point the first abundance index becomes available (FALSE)
+  proc.dev.all = FALSE 
+  #------------------------------------------
+  if(sigma.proc == TRUE){
+    igamma = c(4,0.01) #specify inv-gamma parameters
+    
+    # Process error check
+    gamma.check = 1/rgamma(1000,igamma[1],igamma[2])
+    # check mean process error + CV
+    mu.proc = sqrt(mean(gamma.check)); CV.proc =    sd(sqrt(gamma.check))/mean(sqrt(gamma.check))
+    
+    # check CV
+    round(c(mu.proc,CV.proc),3)
+    quantile(sqrt(gamma.check),c(0.1,0.9))
+  }else{
+    sigma.proc = 0.07 #IF Fixed: typicallly 0.05-0.15 (see Ono et al. 2012)
+  }
+  
+  
+  #--------------------------------------------------------------
+  # Determine estimation for catchability q and observation error 
+  #--------------------------------------------------------------
+  # Assign q to CPUE
+  sets.q = 1:(ncol(cpue)-1) 
+  
+  
   
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
   # Observation Error
@@ -207,29 +362,7 @@ for(s in 1:3){
   
   # Total observation error: TOE = sqrt(SE^2+sigma.est^2+fixed.obsE^2)
   
-  #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
-  # Process Error
-  #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
-  #Estimate set sigma.proc == True
-  sigma.proc = TRUE
-  # Determines if process error deviation are estimated for all years (TRUE)  
-  # or only from the point the first abundance index becomes available (FALSE)
-  proc.dev.all = FALSE 
-  #------------------------------------------
-  if(sigma.proc == TRUE){
-    igamma = c(4,0.01) #specify inv-gamma parameters
-    
-    # Process error check
-    gamma.check = 1/rgamma(1000,igamma[1],igamma[2])
-    # check mean process error + CV
-    mu.proc = sqrt(mean(gamma.check)); CV.proc = sd(sqrt(gamma.check))/mean(sqrt(gamma.check))
-    
-    # check CV
-    round(c(mu.proc,CV.proc),3)
-    quantile(sqrt(gamma.check),c(0.1,0.9))
-  }else{
-    sigma.proc = 0.07 #IF Fixed: typicallly 0.05-0.15 (see Ono et al. 2012)
-  }
+  
   #--------------------------------------------
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
   # Optional: Do TAC Projections
