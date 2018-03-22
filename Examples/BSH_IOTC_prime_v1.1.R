@@ -16,11 +16,11 @@ library(reshape)
 # Setup working directories and output folder labels 
 #-----------------------------------------------------------------
 # Set Working directory file, where assessments are stored 
-File = "C:/Work/Research/JABBA_Assessments"
+File = "C:/Work/Research/GitHub/JABBA_testruns"
 # Set working directory for JABBA R source code
-JABBA.file = "C:/Work/Research/GitHub/JABBAmodel"
+JABBA.file = "C:/Work/Research/GitHub/JABBAbeta"
 # JABBA version
-version = "v1.1"
+version = "v1.1beta"
 # Set Assessment file: assement folder within File that includes .csv input files
 assessment = "BSH_IOTC" 
 # add specifier for assessment (File names of outputs)
@@ -198,7 +198,7 @@ for(s in 1:2){
   }else{
     sigma.proc = 0.07 #IF Fixed: typicallly 0.05-0.15 (see Ono et al. 2012)
   }
-  P_bound = c(0.02,1)  # Soft penalty bounds for P 
+  P_bound = c(0.02,1.)  # Soft penalty bounds for P 
   #--------------------------------------------
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
   # Optional: Do TAC Projections
