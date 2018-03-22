@@ -238,7 +238,7 @@ for(s in 1:4){
   #TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2]) # avg last 3 years
   TACint = 10058 # Catch for 2016
   # Set year of first TAC implementation
-  imp.yr = 2020
+  imp.yr = 2018
   # Set number of projections years
   pyrs = 10
   
