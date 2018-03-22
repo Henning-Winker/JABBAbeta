@@ -196,7 +196,7 @@ if(sigma.proc==TRUE){
       # Run rest of code  
       cat("  
       # Process variance prior
-      isigma2.est ~ dgamma(igamma[1],igamma[2])
+      isigma2.est ~ dgamma(0.001,0.001)
       
       
       # Priors and constraints
@@ -232,7 +232,7 @@ if(sigma.proc==TRUE){
   mSE2 = as.matrix(se2[q1.y:n.years,qs])
   if(n.indices>1) for(i in 2:n.indices){q.init[i] = mean(mCPUE[,i],na.rm=TRUE)/mean(mCPUE[,1],na.rm=TRUE)}
   # Bundle data
-  jags.data <- list(y = log(mCPUE),SE2=mSE2, logY1 = log(mCPUE[1,1]), N = length(q1.y:n.years),nI=n.indices,sigma.fixed=ifelse(sigma.proc==TRUE,0,sigma.proc),igamma=igamma)
+  jags.data <- list(y = log(mCPUE),SE2=mSE2, logY1 = log(mCPUE[1,1]), N = length(q1.y:n.years),nI=n.indices,sigma.fixed=ifelse(sigma.proc==TRUE,0,sigma.proc))
   
   # Initial values
   inits <- function(){list(isigma2.est=runif(1,20,100), itau2=runif(1,80,200), mean.r = rnorm(1),iq = 1/q.init)}
@@ -293,6 +293,20 @@ if(sigma.proc==TRUE){
   
   write.csv(avgCPUE,paste0(input.dir,"/avgCPUE_",assessment,"_",Scenario,".csv"))
   
+  if(meanCPUE==TRUE){
+    cat(paste0("\n","><> Use average CPUE as input for JABBA <><","\n"))
+    
+    CPUE = as.matrix(avgCPUE[,2]) 
+    cpue.check = cpue[,-1]
+    cpue.check[is.na(cpue[,-1])]=0
+    CPUE[,1] = ifelse(apply(cpue.check,1,sum)==0,rep(NA,length(CPUE[,1])),CPUE[,1])
+    se2 =  as.matrix(avgCPUE[,3]^2)     
+    n.indices=1
+    indices = "All"
+    sets.q =1
+    sets.var =1
+  }
+
   }
 
 
@@ -947,7 +961,7 @@ for(i in 1:length(node_id))
         
         pdf = stats::density(post.par,adjust=2)  
         plot(pdf,type="l",xlim=range(0,post.par),yaxt="n",xlab=paste(node_id[i]),ylab="",xaxs="i",yaxs="i",main="")
-        if(i==length(node_id)){
+        if(i==length(node_id)& igamma[1]>0.9){
           rpr = 1/rgamma(10000,igamma[1],igamma[2])
           prior = stats::density(rpr,adjust=2)
           polygon(c(prior$x,rev(prior$x)),c(prior$y,rep(0,length(prior$y))),col=gray(0.4,1))
