@@ -16,11 +16,11 @@ library(reshape)
 # Setup working directories and output folder labels 
 #-----------------------------------------------------------------
 # Set Working directory file, where assessments are stored 
-File = "C:/Work/Research/JABBA_Assessments"
+File = "C:/Work/Research/GitHub/JABBA_testruns"
 # Set working directory for JABBA R source code
 JABBA.file = "C:/Work/Research/GitHub/JABBAmodel"
 # JABBA version
-version = "v1.1"
+version = "v1.1beta"
 # Set Assessment file: assement folder within File that includes .csv input files
 assessment = "SWO_IOTC" 
 # add specifier for assessment (File names of outputs)
@@ -57,7 +57,7 @@ save.all = FALSE # (if TRUE, a very large R object of entire posterior is saved)
 Scenarios = c(paste0("Scenario",1:4)) 
 
 # Execute multiple JABBA runs in loop 
-for(s in 4:4){
+for(s in 1:4){
   Scenario = Scenarios[s] 
   
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
