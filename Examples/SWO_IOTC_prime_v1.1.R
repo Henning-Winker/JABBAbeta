@@ -232,7 +232,8 @@ for(s in 1:4){
   
   # Intermitted TAC to get to current year
   TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2]) # avg last 3 years
-  
+  # Set year of first TAC implementation
+  imp.yr = 2018
   # Set number of projections years
   pyrs = 10
   
