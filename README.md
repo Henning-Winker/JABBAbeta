@@ -1,7 +1,7 @@
 ## JABBAbeta
 Development repository for JABBA (https://github.com/jabbamodel)
 
-<B> JABBA beta version JABBAv1.2beta.R has been added </b>
+<B> JABBA beta version [`JABBAv1.2beta.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/SWO_SA_prime_v1.2.R) has been added </b>
 
 New Feature include:
 + Plotting code is outsouced in JABBA_plots_v1.2.R to facilitate debugging
@@ -26,8 +26,6 @@ Inbuilt JABBA features include:
 + Optional estimation additional observation variance for individual or grouped CPUE time series
 + Easy implementation of time-block changes in selectivity
 
-Reference
-Winker, H., Carvalho, F., Kapur, M. JABBA: Just Another Bayesian Biomass Assessment. (In press at Fisheries 
-Research). 
+[Winker, H., Carvalho, F., Kapur, M. (2018) <U>JABBA: Just Another Bayesian Biomass Assessment.</U> *Fisheries Research* **204**: 275-288.](https://www.sciencedirect.com/science/article/pii/S0165783618300845)   
 
 <B>A self-contained R package of JABBA is forthcoming.</b>
