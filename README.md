@@ -2,10 +2,10 @@
 Development repository for JABBA (https://github.com/jabbamodel)
 
 <B> JABBA beta version [`JABBAv1.2beta.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/SWO_SA_prime_v1.2.R) is now available, which has been developed tested assessments during assessments of:</b>
-+ ICCAT Atlantic blue marlin (BUM)
-+ ICCAT Atlantic bigeye tuna (BET)
-+ IOTC Indian Ocean striped marlin (MLS)
-+ IOTC Indian Ocean black marlin (BLM)
++ [ICCAT Atlantic blue marlin (BUM)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BUM_SA_ENG.pdf)
++ [ICCAT Atlantic bigeye tuna (BET)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BET_SA_ENG.pdf)
++ [IOTC Indian Ocean striped marlin (MLS)](http://www.iotc.org/documents/WPB/16/16-MLS_JABBA)
++ [IOTC Indian Ocean black marlin (BLM)](http://www.iotc.org/documents/WPB/16/15-BLM_JABBA)
 + NOAA Hawaii Kona crab benchmark assessment (KONA)
 
 [New Feature include:](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures)
