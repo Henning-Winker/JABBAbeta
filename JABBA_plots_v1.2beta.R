@@ -1,3 +1,11 @@
+#><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
+# JABBA Plot Function for version 1.2
+# Completed Sep 2018
+# Developed by Henning Winker, Felipe Carvalho and Maia Kapur
+# 
+# NOTE: Best run from "Prime file" as
+# source(paste0(JABBA.file,"/JABBA_plots_",version,".R")) 
+#><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 
 #----------------
 # Total Landings
