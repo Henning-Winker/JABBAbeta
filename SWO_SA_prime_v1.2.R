@@ -5,13 +5,12 @@
 ##><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 
 rm(list=ls())
-# required packages
-library(gplots)
-library(coda)
-library(rjags)
-library(R2jags)
-library("fitdistrplus")
-library(reshape)
+# Install missing packages
+list.of.packages <- c("gplots", "coda","rjags","R2jags","fitdistrplus","reshape")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+# Load Packages
+library(gplots);library(coda);library(rjags);library(R2jags);library("fitdistrplus");library(reshape)
 
 
 #----------------------------------------------------------------
