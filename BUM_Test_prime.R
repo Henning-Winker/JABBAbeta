@@ -4,7 +4,6 @@
 ## Developed by Henning Winker & Felipe Carvalho (Cape Town/Hawaii)  
 ##><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 
-rm(list=ls())
 # required packages
 library(gplots)
 library(coda)
@@ -13,19 +12,17 @@ library(R2jags)
 library("fitdistrplus")
 library(reshape)
 
-
 #----------------------------------------------------------------
 # Setup working directories and output folder labels 
 #-----------------------------------------------------------------
 # Set Working directory file, where assessments are stored 
-File = "C:/Work/Research/GitHub/JABBA_testruns" 
-setwd(File) # Writes JABBA model in this file
+File = "C:/Work/Research/GitHub/JABBA_testruns"
 # Set working directory for JABBA R source code
-JABBA.file = "C:/Work/Research/GitHub/JABBAbeta"
+JABBA.file = "C:/Work/Research/GitHub/JABBAmodel"
 # JABBA version
-version = "v1.2beta"
+version = "v1.1"
 # Set Assessment file: assement folder within File that includes .csv input files
-assessment = "SWO_SA" 
+assessment = "BUM_Test" 
 # add specifier for assessment (File names of outputs)
 
 
@@ -43,7 +40,8 @@ meanCPUE = FALSE # Uses averaged CPUE from state-space tool instead of individua
 Projection = TRUE # Use Projections: requires to define TACs vectors 
 save.projections = TRUE # saves projection posteriors as .RData object 
 catch.metric = "(t)" # Define catch input metric e.g. (tons) "000 t" etc 
-Reproduce.seed = FALSE # If FALSE a random seed assigned to each run, if TRUE set.seed(123)
+Reproduce.seed = TRUE # If FALSE a random seed assigned to each run, if TRUE set.seed(123)
+P_bound = c(0.02,1)  # Soft penalty bounds for P
 # Save entire posterior as .RData object
 save.all = FALSE # (if TRUE, a very large R object of entire posterior is saved)  
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
@@ -55,7 +53,7 @@ save.all = FALSE # (if TRUE, a very large R object of entire posterior is saved)
 # S1: Model including Brazil1 
 # S2: Model excluding Brazil1
 # S3: Base-case Model with time blocks on ESP and JPN 
-# S4: Add scenario as example for using average CPUE
+# S4: Added scenario to illustrate CPUE average option 
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 # Specify Scenario name for output file names
 Scenarios = c(paste0("Scenario",1:4)) 
@@ -72,11 +70,9 @@ for(s in 1:4){
   # 1: Schaefer
   # 2: Fox  
   # 3: Pella-Tomlinsson  
-  # 4: Pella-Tomlinsson with m prior
   
-  Model = 3
-  
-  Mod.names = c("Schaefer","Fox","Pella","Pella_m")[Model]
+  Model = c(1,2,3,3)[s] 
+  Mod.names = c("Schaefer","Fox","Pella")[Model]
   
   # Depensation opiton:
   # Set Plim = Blim/K where recruitment may become impaired (e.g. Plim = 0.25) 
@@ -92,7 +88,7 @@ for(s in 1:4){
   #--------------------------------------------------
   
   # Use SEs from csv file for abudance indices (TRUE/FALSE)
-  SE.I = TRUE
+  SE.I = FALSE
   
   # Load assessment data
   catch = read.csv(paste0(File,"/",assessment,"/catch",assessment,".csv"))
@@ -109,42 +105,12 @@ for(s in 1:4){
   # option to exclude CPUE time series or catch year
   #--------------------------------------------------
   
-  # Set up Base-Case for SWO
-  
-  
-  if(s<3){ # Combine SPA and JAPAN
-    cpue[,4] = apply(cpue[,4:5],1,mean,na.rm=TRUE)
-    cpue[,6] = apply(cpue[,6:7],1,mean,na.rm=TRUE)
-    
-    cpue = cpue[,-c(5,7)] 
-    se[,4] = apply(se[,4:5],1,mean,na.rm=TRUE)
-    se[,6] = apply(se[,6:7],1,mean,na.rm=TRUE)
-    
-    se = se[,-c(5,7)]
-    cpue[!is.finite(cpue[,4]),4]=NA
-    cpue[!is.finite(cpue[,5]),5]=NA
-    se[!is.finite(se[,4]),4]=NA
-    se[!is.finite(se[,5]),5]=NA
-    
-  }
-  
-  # Remove BrazilI
-  if(s>1){
-    cpue = cpue[,-c(2)]
-    se = se[,-c(2)]
-  }
-  
-  
-  names(cpue)
-  ncol(catch)
-  ncol(cpue)
   
   #------------------------------------------------------
   # Option use mean CPUE from state-space cpue averaging
   #-----------------------------------------------------
   meanCPUE = FALSE
   if(s==4) meanCPUE = TRUE
-  
   #------------------------------------------------
   # Prior for unfished biomass K
   #------------------------------------------------
@@ -155,7 +121,7 @@ for(s in 1:4){
   K.dist = c("lnorm","range")[1]
   
   # if lnorm use mean and CV; if range use lower,upper bound
-  K.prior = c(200000,1) 
+  K.prior = c(50000,2)  
   
   #-----------------------------------------------------------
   # mean and CV and sd for Initial depletion level P1= SB/SB0
@@ -183,9 +149,11 @@ for(s in 1:4){
   # Resilience: "Very low", "Low", "Medium", High" (requires r.range = TRUE)
   
   # use [1] lognormal(mean,stdev) or [2] range (min,max) or
-  r.dist = c("lnorm","range")[1] 
+  r.dist = c("lnorm","range")[2] 
   
-  r.prior = c(0.42,0.37) 
+  r.prior = c(0.1,0.4)
+  if( Mod.names=="Schaefer") r.prior[1] = r.prior[1]*2 
+  
   
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
   # Observation Error
@@ -199,7 +167,7 @@ for(s in 1:4){
   
   # As option for data-weighing
   # minimum fixed observation error for each variance set (optional choose 1 value for both)
-  fixed.obsE = c(0.2) # Important if SE.I is not availble
+  fixed.obsE = c(0.25) # Important if SE.I is not availble
   
   # Total observation error: TOE = sqrt(SE^2+sigma.est^2+fixed.obsE^2)
   
@@ -227,7 +195,6 @@ for(s in 1:4){
     sigma.proc = 0.07 #IF Fixed: typicallly 0.05-0.15 (see Ono et al. 2012)
   }
   #--------------------------------------------
-  
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
   # Optional: Do TAC Projections
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
@@ -237,13 +204,13 @@ for(s in 1:4){
   catch[nrow(catch),]
   
   # Set range for alternative TAC projections
-  TACs = seq(10000,18000,1000) #example
+  TACs = seq(500,4000,500) #example
   
-  # Intermitted TAC to get to TAC implementation year
-  #TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2]) # avg last 3 years
-  TACint = 10058 # Catch for 2016
+  # Intermitted TAC to get to current year
+  TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2]) # avg last 3 years
+  #TACint = 10058 # Catch for 2016
   # Set year of first TAC implementation
-  imp.yr = 2018
+  imp.yr = 2019
   # Set number of projections years
   pyrs = 10
   
@@ -261,8 +228,5 @@ for(s in 1:4){
   
   # Run model (BSPSPexe file must be in the same working directory)
   source(paste0(JABBA.file,"/JABBA",version,".R")) 
-  # Run plot function
-  source(paste0(JABBA.file,"/JABBA_plots_",version,".R")) 
-  
   
 }# THE END

@@ -33,7 +33,7 @@ if(add.catch.CV==TRUE){
   predC = apply(estC,2,quantile,c(0.5,0.025,0.975)) 
   cord.x <- c(years,rev(years))
   cord.y<-c(predC[2,],rev(predC[3,]))
-  plot(years,(TC),type="n",ylim=c(0,max(TC,na.rm=T)),lty=1,lwd=1.3,xlab="Year",ylab=paste0("Catch ",catch.metric),main="")
+  plot(years,(TC),type="n",ylim=c(0,max(predC,na.rm=T)),lty=1,lwd=1.3,xlab="Year",ylab=paste0("Catch ",catch.metric),main="")
   polygon(cord.x,cord.y,col="gray",border=0,lty=1)
   lines(years,predC[1,],lwd=2,col=4)
   points(years,(TC),pch=21,bg=0,cex=1.5)
