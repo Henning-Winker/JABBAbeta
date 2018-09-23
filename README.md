@@ -1,15 +1,17 @@
 ## JABBAbeta
 Development repository for JABBA (https://github.com/jabbamodel)
 
-<B> JABBA beta version [`JABBAv1.2beta.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/SWO_SA_prime_v1.2.R) is now available, which has been developed tested assessments during assessments of:</b>
+<B> JABBA beta version [`JABBAv1.2beta.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/SWO_SA_prime_v1.2.R) is now available</b>
+This new beta version has been developed and tested during stock assessments:
 + [ICCAT Atlantic blue marlin (BUM)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BUM_SA_ENG.pdf)
 + [ICCAT Atlantic bigeye tuna (BET)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BET_SA_ENG.pdf)
 + [IOTC Indian Ocean striped marlin (MLS)](http://www.iotc.org/documents/WPB/16/16-MLS_JABBA)
 + [IOTC Indian Ocean black marlin (BLM)](http://www.iotc.org/documents/WPB/16/15-BLM_JABBA)
-+ NOAA Hawaii Kona crab benchmark assessment (KONA)
++ [NOAA Hawaii Kona crab benchmark assessment (KONA)](https://www.fisheries.noaa.gov/pacific-islands/population-assessments/western-pacific-stock-assessment-review#2018-kona-crab-in-the-main-hawaiian-islands)
 
 [New Feature include:](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures)
 + Plotting code is outsouced in [`JABBA_plots_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/JABBA_plots_v1.2beta.R) to facilitate debugging
++ Settings.txt saved for reference in Input folder
 + Preliminay estimate shape m option with informative 
 + Catch.CV option: Allows addimitting uncertainty about the catch
 + CatchOnly option: Runs model with catch and priors without fitting any abundance indices
