@@ -9,7 +9,7 @@ Development repository for JABBA (https://github.com/jabbamodel)
 + NOAA Hawaii Kona crab benchmark assessment (KONA)
 
 [New Feature include:](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures)
-+ Plotting code is outsouced in [`JABBA_plots_v1.2.R`]https://github.com/Henning-Winker/JABBAbeta/blob/master/JABBA_plots_v1.2beta.R to facilitate debugging
++ Plotting code is outsouced in [`JABBA_plots_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/JABBA_plots_v1.2beta.R) to facilitate debugging
 + Preliminay estimate shape m option with informative 
 + Catch.CV option: Allows addimitting uncertainty about the catch
 + CatchOnly option: Runs model with catch and priors without fitting any abundance indices
