@@ -10,7 +10,7 @@ This new beta version has been developed and tested during stock assessments of:
 + [IOTC Indian Ocean black marlin (BLM)](http://www.iotc.org/documents/WPB/16/15-BLM_JABBA)
 + [NOAA Hawaii Kona crab benchmark assessment (KONA)](https://www.fisheries.noaa.gov/pacific-islands/population-assessments/western-pacific-stock-assessment-review#2018-kona-crab-in-the-main-hawaiian-islands)
 
-[New Feature include:](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures) 
+[New Features](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures) include:
 + Plotting code is outsouced in [`JABBA_plots_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/JABBA_plots_v1.2beta.R) to facilitate debugging
 + Settings.txt saved for reference in Input folder
 + Preliminay estimate shape m option with informative 
