@@ -293,7 +293,6 @@ if(sigma.proc==TRUE){
   }    
   avgCPUE = data.frame(Year=years,CPUE= fitted,logSE=logSE)
   
-  write.csv(avgCPUE,paste0(input.dir,"/avgCPUE_",assessment,"_",Scenario,".csv"))
   
   if(meanCPUE==TRUE){
     cat(paste0("\n","><> Use average CPUE as input for JABBA <><","\n"))
@@ -303,12 +302,16 @@ if(sigma.proc==TRUE){
     cpue.check[is.na(cpue[,-1])]=0
     CPUE[,1] = ifelse(apply(cpue.check,1,sum)==0,rep(NA,length(CPUE[,1])),CPUE[,1])
     se2 =  as.matrix(avgCPUE[,3]^2)     
+    
     n.indices=1
     indices = "All"
     sets.q =1
     sets.var =1
+    write.csv(data.frame(Year=avgCPUE[,1],muCPUE=CPUE[,1],se=sqrt(se2)),paste0(input.dir,"/avgCPUE_",assessment,"_",Scenario,".csv"))
+    
   }
-
+  
+  
   }
 
 
@@ -1620,10 +1623,17 @@ if(save.trajectories==TRUE){
   
 }
 
+cat(paste0("\n","><> Write CSV file with trajectories + logse <><","\n"))
+
+Pred.traj = data.frame(Year= years,B_t = apply(posteriors$SB,2,median),logse.B_t = apply(log(posteriors$SB),2,sd),
+                       F_t = apply(t(t(posteriors$HtoHmsy) * (as.numeric(posteriors$Hmsy))),2,median),logse.F_t = apply(log(t(t(posteriors$HtoHmsy) * (as.numeric(posteriors$Hmsy)))),2,sd),
+                       BtoK_t = apply(posteriors$P,2,median),logse.BtoK_t = apply(log(posteriors$P),2,sd),
+                       BtoBmsy_t = apply(posteriors$BtoBmsy,2,median),logse.BtoBmsy_t = apply(log(posteriors$BtoBmsy),2,sd),
+                       FtoFmsy_t = apply(posteriors$HtoHmsy,2,median),logse.FtoFmsy_t = apply(log(posteriors$HtoHmsy),2,sd)
+                       ) 
+
+write.csv(Pred.traj,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_trajectories.csv"))
+
 
 cat(paste0("\n","\n","><> Scenario ",Mod.names,"_",Scenario," for ",assessment," - DONE! <><","\n"))
-
-
-
-
 

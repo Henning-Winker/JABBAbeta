@@ -8,10 +8,20 @@
     #Catchability coefficients
     for(i in 1:nq)
     {   
-    q[i] ~ dunif(eps,100)    
+    q[i] ~ dunif(q_bounds[1],q_bounds[2])    
     }  
     
+    # Process variance prior
+    isigma2.est ~ dgamma(igamma[1],igamma[2])
     
+    # Carrying Capacity SB0
+    K ~ dlnorm(log(K.pr[1]),pow(K.pr[2], -2))
+    
+    # informative priors for Hmsy as a function of r
+    r ~ dlnorm(log(r.pr[1]),pow(r.pr[2],-2))
+    
+     
+      m <- mu.m     
     
       # Lognormal for Biomass depletion at the start (deteministic)
       psi ~ dlnorm(log(psi.pr[1]),pow(psi.pr[2],-2)) #I(0.1,1.1)    
@@ -22,8 +32,8 @@
       sigma <- sqrt(sigma2)
       fakesigma.fixed <- sigma.fixed # Prevent unused variable error msg    
       
-    # Obsevation variance
-    for(i in 1:nvar)
+      # Obsevation variance
+      for(i in 1:nvar)
       {
       # Observation error
       itau2[i]~ dgamma(0.001,0.001)
@@ -41,15 +51,10 @@
       
       }}
         
-    # Process variance prior
-    isigma2.est ~ dgamma(igamma[1],igamma[2])
-    
-    # Carrying Capacity SB0
-    K ~ dlnorm(log(K.pr[1]),pow(K.pr[2], -2))
-    
-    # informative priors for Hmsy as a function of r
-    r ~ dlnorm(log(r.pr[1]),pow(r.pr[2],-2))
-    
+for(t in 1:N){    
+estC[t] <- TC[t]
+}
+  
     
     #Process equation
     Pmean[1] <- log(psi)
@@ -61,12 +66,13 @@
     for (t in 2:N) 
     {
     Pmean[t] <- ifelse(P[t-1] > Plim,
-    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1)) - TC[t-1]/K,0.005)),
-    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1))*P[t-1]*slope.HS - TC[t-1]/K,0.005)))
+    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1)) - estC[t]/K,0.001)),
+    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1))*P[t-1]*slope.HS - estC[t]/K,0.001)))
     iPV[t] <- ifelse(t<(stI),10000,isigma2) # inverse process variance
     P[t] ~ dlnorm(Pmean[t],iPV[t])
     penB[t]  <- ifelse(P[t]<(P_bound[1]),log(K*P[t])-log(K*(P_bound[1])),ifelse(P[t]>P_bound[2],log(K*P[t])-log(K*(P_bound[2])),0)) # penalty if Pmean is outside viable biomass
     }
+    
     
     # Process error deviation 
     for(t in 1:N){
@@ -110,11 +116,22 @@
     HtoHmsy[t] <- H[t]/(Hmsy) 
     }
     
+    
+    # Enforce soft penalty on K if < K_bounds >  
+    K.pen ~ dnorm(penK,1000) # enforce penalty 
+    penK  <- ifelse(K<(K_bounds[1]),log(K)-log(K_bounds[1]),ifelse(K>K_bounds[2],log(K)-log(K_bounds[2]),0)) # penalty if Pmean is outside viable biomass
+    
 
     # Enforce soft penalty on process deviance if sigma.proc > 0.2 
     proc.pen ~ dnorm(penProc,1000) # enforce penalty 
-    penProc  <- ifelse(sigma>0.2,log(sigma)-log(0.2),0) 
+    penProc  <- ifelse(sigma>sigmaproc_bound,log(sigma)-log(sigmaproc_bound),0) 
+     
     
+    # Enforce soft penalty on observation error if sigma.obs > sigma_bound 
+    for(i in 1:nvar){
+    obs.pen[i] ~ dnorm(penObs[i],1000) # enforce penalty 
+    penObs[i]  <- ifelse(pow(tau2[i],0.5)>sigmaobs_bound,log(pow(tau2[i],0.5))-log(sigmaobs_bound),0) 
+    }
     
     
       for(i in 1:nTAC){

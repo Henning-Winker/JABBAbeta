@@ -18,7 +18,8 @@ library(reshape)
 # Setup working directories and output folder labels 
 #-----------------------------------------------------------------
 # Set Working directory file, where assessments are stored 
-File = "C:/Work/Research/GitHub/JABBA_testruns"
+File = "C:/Work/Research/GitHub/JABBA_testruns" 
+setwd(File) # Writes JABBA model in this file
 # Set working directory for JABBA R source code
 JABBA.file = "C:/Work/Research/GitHub/JABBAbeta"
 # JABBA version
