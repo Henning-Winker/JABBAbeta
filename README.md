@@ -13,10 +13,10 @@ This new beta version has been developed and tested during stock assessments of:
 [New Features](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures) include:
 + Plotting code is outsouced in [`JABBA_plots_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/JABBA_plots_v1.2beta.R) to facilitate debugging
 + Settings.txt saved for reference in Input folder
-+ Preliminay estimate shape m option with informative 
++ Preliminary estimate shape m option with informative 
 + Catch.CV option: Allows addimitting uncertainty about the catch
-+ CatchOnly option: JABBA run with catch and priors but without fitting any abundance indices
-+ Lower lower and upper values of P_bound, K_bound, q_bound can be set manually to enforce "soft boundaries (CV=0.1)     
++ CatchOnly option: JABBA run with catch and priors, but without fitting any abundance indices
++ Lower and upper values of P_bound, K_bound, q_bound can be set manually to enforce "soft boundaries (CV=0.1)     
 + Option to manually set starting values for r, q and K
 
 See examples [`SWO_SA_NewFeatures_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/V1.2_NewFeatures/SWO_SA_NewFeatures_v1.2.R)
@@ -37,6 +37,7 @@ Inbuilt JABBA features include:
 + Optional estimation additional observation variance for individual or grouped CPUE time series
 + Easy implementation of time-block changes in selectivity
 
+**Reference**
 [Winker, H., Carvalho, F., Kapur, M. (2018) <U>JABBA: Just Another Bayesian Biomass Assessment.</U> *Fisheries Research* **204**: 275-288.](https://www.sciencedirect.com/science/article/pii/S0165783618300845)   
 
 <B>A self-contained R package of JABBA is forthcoming.</b>
