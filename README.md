@@ -3,7 +3,7 @@ Development repository for JABBA (https://github.com/jabbamodel)
 
 <B> New JABBA beta version [`JABBAv1.2beta.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/SWO_SA_prime_v1.2.R) is now available!</b>
 
-This new beta version has been developed and tested during stock assessments:
+This new beta version has been developed and tested during stock assessments of:
 + [ICCAT Atlantic blue marlin (BUM)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BUM_SA_ENG.pdf)
 + [ICCAT Atlantic bigeye tuna (BET)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BET_SA_ENG.pdf)
 + [IOTC Indian Ocean striped marlin (MLS)](http://www.iotc.org/documents/WPB/16/16-MLS_JABBA)
