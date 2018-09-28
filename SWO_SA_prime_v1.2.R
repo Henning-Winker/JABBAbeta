@@ -12,7 +12,6 @@ if(length(new.packages)) install.packages(new.packages)
 # Load Packages
 library(gplots);library(coda);library(rjags);library(R2jags);library("fitdistrplus");library(reshape)
 
-
 #----------------------------------------------------------------
 # Setup working directories and output folder labels 
 #-----------------------------------------------------------------

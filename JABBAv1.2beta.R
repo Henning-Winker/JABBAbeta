@@ -77,6 +77,7 @@ styr.I = styr.cpue-styr+1
 conv.cpue = as.numeric(rbind(matrix(rep(NA,(styr.I-1)*n.indices),styr.I-1,n.indices),as.matrix(cpue[,-1])))
 CPUE=matrix(conv.cpue,nrow=n.years,ncol=n.indices)
 }else{
+CPUE.plot =FALSE  
 CPUE = Catch  
 CPUE[,1] = NA   
 CPUE[1,1] = 1
