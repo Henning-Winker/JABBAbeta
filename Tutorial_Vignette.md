@@ -1,21 +1,14 @@
----
-title: Model Execution Vignette
-subtitle: Working with the Prime File
-author: "Henning Winker, Felipe Carvalho, Maia Kapur"
-geometry: margin = 1in
-output:
-  github_document
-fontsize: 11pt
----
-The R Prime file [`SWO_SA_prime_v1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA_prime_v1.1.R) can be used to reproduce analysis and figures from Winker et al (2018, in review), when used in conjuntion with [`JABBAv1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/JABBAv1.1.R) and data from the South Atlantic Swordfish Fishery [`/SWO_SA`](https://github.com/jabbamodel/JABBA/tree/master/SWO_SA). This tutorial explains the main segments of the Prime file setup.
+Model Execution Vignette
+================
+Henning Winker, Felipe Carvalho, Maia Kapur
 
+The R Prime file [`SWO_SA_prime_v1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA_prime_v1.1.R) can be used to reproduce analysis and figures from Winker et al (2018, in review), when used in conjuntion with [`JABBAv1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/JABBAv1.1.R) and data from the South Atlantic Swordfish Fishery [`/SWO_SA`](https://github.com/jabbamodel/JABBA/tree/master/SWO_SA). This tutorial explains the main segments of the Prime file setup.
 
 ### Getting started
 
-
 JABBA requires the installation of [R](https://cran.r-project.org/) and [JAGS](https://sourceforge.net/projects/mcmc-jags/) and the following R packages that can be directly installed within R
 
-```{r get started, eval = F, warning = F, message = F}
+``` r
 ##><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><><><
 ## JABBA: Just Another Bayesian Biomass Assessment
 ## Input File for JABBA
@@ -32,20 +25,20 @@ library(reshape)
 ```
 
 ### Input files
-JABBA requires a minimum of two input comma-separated value files (.csv) in the form of catch and abundance indices. The `Catch` input file contains the time series of year and catch by weight, aggregated across fleets for the entire fishery. Missing catch years or catch values are not allowed. JABBA is formulated to accommodate abundance indices from multiple sources (i.e., fleets) in a single `cpue` file, which contains all considered abundance indices.  The first column of the `cpue` input is year, which must match the range of years provided in the Catch file. In contrast to the `Catch` input, missing abundance index values are allowed, such that different abundance indices may correspond to smaller portions of the catch time series. Optionally, an additional `se` input can be passed onto JABBA, containing standard error estimates associated with the abundance indices on a log scale. The se input is a third file, structurally identical to the `cpue` input. Alternatively, this feature can be used to apply different weighting to individual abundance indices by assigning varying coefficients of variation (CV) to each time series. If such weighting is implemented, it is advised that the CV chosen for each indexed year approximates the observed standard error on the log scale, such that the data weights are congruent with expectations as to how well the model should fit these data.     
+
+JABBA requires a minimum of two input comma-separated value files (.csv) in the form of catch and abundance indices. The `Catch` input file contains the time series of year and catch by weight, aggregated across fleets for the entire fishery. Missing catch years or catch values are not allowed. JABBA is formulated to accommodate abundance indices from multiple sources (i.e., fleets) in a single `cpue` file, which contains all considered abundance indices. The first column of the `cpue` input is year, which must match the range of years provided in the Catch file. In contrast to the `Catch` input, missing abundance index values are allowed, such that different abundance indices may correspond to smaller portions of the catch time series. Optionally, an additional `se` input can be passed onto JABBA, containing standard error estimates associated with the abundance indices on a log scale. The se input is a third file, structurally identical to the `cpue` input. Alternatively, this feature can be used to apply different weighting to individual abundance indices by assigning varying coefficients of variation (CV) to each time series. If such weighting is implemented, it is advised that the CV chosen for each indexed year approximates the observed standard error on the log scale, such that the data weights are congruent with expectations as to how well the model should fit these data.
 
 The three (or two) csv files are named so that the type classifier `Catch`, `cpue` and `se` is combined with the `assessment` name. In this example, we define `assessment = SWO_SA`, so that [`catchSWO_SA.csv`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA/CatchSWO_SA.csv), [`cpueSWO_SA.csv`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA/cpueSWO_SA.csv) and [`seSWO_SA.csv`](https://github.com/jabbamodel/JABBA/blob/master/SWO_SA/seSWO_SA.csv).
 
-All input files have to be saved in a folder that is named after the `assessment`, here `/SWO_SA`. 
+All input files have to be saved in a folder that is named after the `assessment`, here `/SWO_SA`.
 
-In the Prime file:  
-`File =` requires the path where the assessment folder is located   
-`JABBA =` requires the path where the JABBA model `JABBAv1.1.R` is located    
-`version =` determines the JABBA model version   
-`assessment =` assignes the assessment folder name  
+In the Prime file:
+`File =` requires the path where the assessment folder is located
+`JABBA =` requires the path where the JABBA model `JABBAv1.1.R` is located
+`version =` determines the JABBA model version
+`assessment =` assignes the assessment folder name
 
-```{r Files, eval = FALSE, warning = F, message = F}
-
+``` r
 #----------------------------------------------------------------
 # Setup working directories and output folder labels 
 #-----------------------------------------------------------------
@@ -60,11 +53,11 @@ assessment = "SWO_SA"
 # add specifier for assessment (File names of outputs)
 ```
 
-
 ### Basic settings
-JABBA provides various Graphic, Output, Saving options that can be specified in the prime file. If not specified, JABBA will automatically use the default settings as specified on top of the [`JABBAv1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/JABBAv1.1.R) code.  
 
-```{r options, eval = F, warning = F, message = F}
+JABBA provides various Graphic, Output, Saving options that can be specified in the prime file. If not specified, JABBA will automatically use the default settings as specified on top of the [`JABBAv1.1.R`](https://github.com/jabbamodel/JABBA/blob/master/JABBAv1.1.R) code.
+
+``` r
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 # Graphic, Output, Saving (.RData) settings 
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
@@ -82,19 +75,17 @@ catch.metric = "(t)" # Define catch input metric e.g. (tons) "000 t" etc
 # Save entire posterior as .RData object
 save.all = FALSE # (if TRUE, a very large R object of entire posterior is saved)  
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
-
 ```
 
 ### Looping through scenarios
 
 JABBA makes it easy to run alternative scenarios in a loop. For this purpose, a unique name has to be assgined to each scenario. For example, a generic option to do this for 10 alternative scenarios is:
 
-`Scenarios = c(paste0("Scenario",1:10))`    
+`Scenarios = c(paste0("Scenario",1:10))`
 
-but individual names may be specified as well, e.g. `Scenarios = c("Run_high_r","Run_medium_r","Run_low_r")`. JABBA automatically creates a folder for each scenario, including the `Input` and `output` subfolders.  Note that the type of model `_Schaefer`, `_Fox` and `_Pella` is automatically added to the name of scenario folder.   
+but individual names may be specified as well, e.g. `Scenarios = c("Run_high_r","Run_medium_r","Run_low_r")`. JABBA automatically creates a folder for each scenario, including the `Input` and `output` subfolders. Note that the type of model `_Schaefer`, `_Fox` and `_Pella` is automatically added to the name of scenario folder.
 
-```{r Run Scenarios, eval = FALSE, warning = F, message = F}
-
+``` r
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 # Optional: Note Scenarios
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
@@ -130,12 +121,12 @@ for(s in 1:3){
   BmsyK = 0.4 # Set Surplus Production curve inflection point
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>  
 ```
+
 ### Read input data files
-Here, the user can specify if the `se` file is available by setting `SE.I = TRUE' 
-We advice to always check if all csv files were correctly read-in.
 
-```{r Read-data, eval = FALSE, warning = F, message = F}
+Here, the user can specify if the `se` file is available by setting \`SE.I = TRUE' We advice to always check if all csv files were correctly read-in.
 
+``` r
 #--------------------------------------------------
 # Read csv files
 #--------------------------------------------------
@@ -153,17 +144,15 @@ We advice to always check if all csv files were correctly read-in.
   
   head(cpue)
   head(catch)
-  
 ```
 
 ### Input data manipulation
-This section is optional. For the SWO_SA example, we use this section to manipulate the input `cpue` and `se` data for scenarios 1-3. For sceanarios 2-3, we remove the BRA_LL1 series. For the base-case scenario 3, we also use seperate time series (time-blocks) for Japan (JP_LL1 & JP_LL2) and Spain (SP_LL1 & SP_LL2), which we merge back into one index for JP_1 and on for SP_LL1 for scenarios 1-2. If the `se` input is provided, the same munipulations must be applied as for `cpue`.Again, always check if the manilupations were correctly applied.   
 
-JABBA provides provides the option to use a single averaged CPUE index instead of the individual abundance indices (see *2.5.1. State-Space model for averaging of abundance indices* in Winker et al, 2018). This feature can be activated by setting `meanCPUE = TRUE`.  
+This section is optional. For the SWO\_SA example, we use this section to manipulate the input `cpue` and `se` data for scenarios 1-3. For sceanarios 2-3, we remove the BRA\_LL1 series. For the base-case scenario 3, we also use seperate time series (time-blocks) for Japan (JP\_LL1 & JP\_LL2) and Spain (SP\_LL1 & SP\_LL2), which we merge back into one index for JP\_1 and on for SP\_LL1 for scenarios 1-2. If the `se` input is provided, the same munipulations must be applied as for `cpue`.Again, always check if the manilupations were correctly applied.
 
+JABBA provides provides the option to use a single averaged CPUE index instead of the individual abundance indices (see *2.5.1. State-Space model for averaging of abundance indices* in Winker et al, 2018). This feature can be activated by setting `meanCPUE = TRUE`.
 
-```{r manipulate data, eval = FALSE, warning = F, message = F}
-
+``` r
   #--------------------------------------------------
   # option to exclude CPUE time series or catch year
   #--------------------------------------------------
@@ -199,19 +188,17 @@ JABBA provides provides the option to use a single averaged CPUE index instead o
   # Option use mean CPUE from state-space cpue averaging
   #-----------------------------------------------------
   meanCPUE = FALSE
-    
 ```
 
 ### Prior and Process variance settings
+
 Please see section *2.3.2. Prior specification* in Winker et al. (2008) for details.
 
-Most prior settings provide more than one option. For example, if the prior for K is meant to be specified as a lognormal prior set `K.dist = c("lnorm","range")[1]`, whereas for a range set `K.dist = c("lnorm","range")[2]`. If the prior for K is specified as lognormal, e.g. `K.prior = c(200000,1)`, it requires the untransformed mean K and the assumed CV. If the prior for K is specified as range, it requires the assumed minum and maximum values, e.g. `K.prior = c(15000,1500000)`.          
+Most prior settings provide more than one option. For example, if the prior for K is meant to be specified as a lognormal prior set `K.dist = c("lnorm","range")[1]`, whereas for a range set `K.dist = c("lnorm","range")[2]`. If the prior for K is specified as lognormal, e.g. `K.prior = c(200000,1)`, it requires the untransformed mean K and the assumed CV. If the prior for K is specified as range, it requires the assumed minum and maximum values, e.g. `K.prior = c(15000,1500000)`.
 
-The r prior provides an additional option, in that it can be specified as a generic resiliance category *Very low, Low, Medium* or *High*, such as provided by [FishBase](www.FishBase.org). This requires specifying `K.dist = c("lnorm","range")[2]` (i.e. as a range) and then setting the `K.prior` equal to one of the above reliance categories, e.g. `K.prior = "Low"`.     
+The r prior provides an additional option, in that it can be specified as a generic resiliance category *Very low, Low, Medium* or *High*, such as provided by [FishBase](www.FishBase.org). This requires specifying `K.dist = c("lnorm","range")[2]` (i.e. as a range) and then setting the `K.prior` equal to one of the above reliance categories, e.g. `K.prior = "Low"`.
 
-```{r Prior, eval = FALSE, warning = F, message = F}
-
-
+``` r
   #------------------------------------------------
   # Prior for unfished biomass K
   #------------------------------------------------
@@ -270,13 +257,11 @@ The r prior provides an additional option, in that it can be specified as a gene
   }else{
     sigma.proc = 0.07 #IF Fixed: typicallly 0.05-0.15 (see Ono et al. 2012)
   }
-  
 ```
 
-Both catchability *q* and the estimable observation variance $\sigma^2_{est,i}$ can be specified to be estimated: (1) for each CPUE index, (2) in groups or (3) as the same quantatity for all indices. For (1), simply provide a vector of unique integer in order for each index, e.g. `sets.q = 1:(ncol(cpue)-1)`. For (2), `set.q =` can be specified by grouping similar indices, e.g. `set.q = c(1,1,2,2,3)`. For (3), simply provide the indentifier 1 for all indices, e.g. `sets.q = rep(1,ncol(cpue)-1)`. The exact same principles apply for assigning $\sigma^2_{est,i}$ to individual indices *i*, i.e. `sets.var = 1:(ncol(cpue)-1)` for case (1).
+Both catchability *q* and the estimable observation variance *σ*<sub>*e**s**t*, *i*</sub><sup>2</sup> can be specified to be estimated: (1) for each CPUE index, (2) in groups or (3) as the same quantatity for all indices. For (1), simply provide a vector of unique integer in order for each index, e.g. `sets.q = 1:(ncol(cpue)-1)`. For (2), `set.q =` can be specified by grouping similar indices, e.g. `set.q = c(1,1,2,2,3)`. For (3), simply provide the indentifier 1 for all indices, e.g. `sets.q = rep(1,ncol(cpue)-1)`. The exact same principles apply for assigning *σ*<sub>*e**s**t*, *i*</sub><sup>2</sup> to individual indices *i*, i.e. `sets.var = 1:(ncol(cpue)-1)` for case (1).
 
-```{r Priors part II, eval = FALSE, warning = F, message = F}
-
+``` r
   #--------------------------------------------------------------
   # Determine estimation for catchability q and observation error 
   #--------------------------------------------------------------
@@ -299,14 +284,13 @@ Both catchability *q* and the estimable observation variance $\sigma^2_{est,i}$ 
   
   # Total observation error: TOE = sqrt(SE^2+sigma.est^2+fixed.obsE^2)
   #--------------------------------------------
-```  
+```
 
-### Projections under constant Total Allowable Catch (TAC)  
-JABBA enables projections under constant catch scenarios. JABBA automatically compares the difference between the last assessment year and the present year. The difference between these years is projected forward under the *current* catch, which could, for example, be determined based on updated catch inofrmation `TACint = 10058` or by assuming an average catch based on the three most recent assessment years, such that `TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2])`. All prjected posteriors can be saved a `_projections.Rdata` object, which can be easily passed on JABBAgoesFLR.R for further processing, including the production of Kobe projection matrices.        
+### Projections under constant Total Allowable Catch (TAC)
 
+JABBA enables projections under constant catch scenarios. JABBA automatically compares the difference between the last assessment year and the present year. The difference between these years is projected forward under the *current* catch, which could, for example, be determined based on updated catch inofrmation `TACint = 10058` or by assuming an average catch based on the three most recent assessment years, such that `TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2])`. All prjected posteriors can be saved a `_projections.Rdata` object, which can be easily passed on JABBAgoesFLR.R for further processing, including the production of Kobe projection matrices.
 
-```{r Projections, eval = FALSE, warning = F, message = F}
-  
+``` r
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
   # Optional: Do TAC Projections
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>>
@@ -323,13 +307,11 @@ JABBA enables projections under constant catch scenarios. JABBA automatically co
   TACint = 10058 # Catch for 2016
   # Set number of projections years
   pyrs = 10
-
 ```
-  
+
 ### MCMC setting and Model execution
 
-```{r Model execution, eval = FALSE, warning = F, message = F}
-  
+``` r
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
   # Execute model and produce output
   #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
@@ -346,4 +328,3 @@ JABBA enables projections under constant catch scenarios. JABBA automatically co
   
   }# THE END
 ```
- 
