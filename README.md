@@ -13,10 +13,10 @@ This new beta version has been developed and tested during stock assessments of:
 [New Features](https://github.com/Henning-Winker/JABBAbeta/tree/master/V1.2_NewFeatures) include:
 + Plotting code is outsouced in [`JABBA_plots_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/JABBA_plots_v1.2beta.R) to facilitate debugging
 + Settings.txt saved for reference in Input folder
-+ Preliminary estimate shape m option with informative 
-+ Catch.CV option: Allows addimitting uncertainty about the catch
++ Preliminary estimate shape m option with an informative on the inflection point B<sub>MSY</sub>/K 
++ Catch.CV option: Allows admitting uncertainty about the catch
 + CatchOnly option: JABBA run with catch and priors, but without fitting any abundance indices
-+ Lower and upper values of P_bound, K_bound, q_bound can be set manually to enforce "soft boundaries (CV=0.1)     
++ Lower and upper values of P_bound, K_bound, q_bound can be set manually to enforce "soft" boundaries (CV=0.1)     
 + Option to manually set starting values for r, q and K
 
 See examples [`SWO_SA_NewFeatures_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/V1.2_NewFeatures/SWO_SA_NewFeatures_v1.2.R)
