@@ -3,6 +3,7 @@ Development repository for JABBA (https://github.com/jabbamodel)
 
 <B> New JABBA beta version [`JABBAv1.2beta.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/SWO_SA_prime_v1.2.R) is now available!</b>
 
+
 This new beta version has been developed and tested during stock assessments of:
 + [ICCAT Atlantic blue marlin (BUM)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BUM_SA_ENG.pdf)
 + [ICCAT Atlantic bigeye tuna (BET)](https://www.iccat.int/Documents/Meetings/Docs/2018/REPORTS/2018_BET_SA_ENG.pdf)
@@ -18,6 +19,8 @@ This new beta version has been developed and tested during stock assessments of:
 + CatchOnly option: JABBA run with catch and priors, but without fitting any abundance indices
 + Lower and upper values of P_bound, K_bound, q_bound can be set manually to enforce "soft" boundaries (CV=0.1)     
 + Option to manually set starting values for r, q and K
+
+A detailed [Tutorial](https://github.com/Henning-Winker/JABBAbeta/blob/master/Tutorial_Vignette.md) describes how to set up the JABBA 'Prime' file 
 
 See examples [`SWO_SA_NewFeatures_v1.2.R`](https://github.com/Henning-Winker/JABBAbeta/blob/master/V1.2_NewFeatures/SWO_SA_NewFeatures_v1.2.R)
 
