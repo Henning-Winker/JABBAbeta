@@ -6,7 +6,7 @@
 cat(paste0("\n","><>><>><>><>><>><>><>><>"))
 cat(paste0("\n","><> Run Model ",Mod.names,"<><"))
 cat(paste0("\n","><>><>><>><>><>><>><>><>","\n","\n"))
-# setwd(paste(File)
+# setwd(paste(File))
 dir.create(paste0(File,"/",assessment),showWarnings = FALSE)
 dir.create(paste0(File,"/",assessment,"/",Scenario,"_",Mod.names),showWarnings = FALSE)
 dir.create(paste0(File,"/",assessment,"/",Scenario,"_",Mod.names,"/Input"),showWarnings = FALSE)
@@ -17,11 +17,13 @@ input.dir = paste0(File,"/",assessment,"/",Scenario,"_",Mod.names,"/Input")
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
 if(exists("igamma")==FALSE) igamma = c(4,0.01)  # Generic process error prior
 if(exists("BmsyK")==FALSE) BmsyK = 0.4  # JABBA default for Pella model
-if(exists("Model")==FALSE){ Model = 1; Mod.names = c("Schaefer")} # Run Schaefer if model is not specified
+if(exists("Model")==FALSE){ model = 1; Mod.names = c("Schaefer")} # Run Schaefer if model is not specified
 if(exists("proc.dev.all")==FALSE) proc.dev.all = FALSE # process error deviation if only catch is available  
 if(exists("Plim")==FALSE) Plim = 0  # Standard non-compound model
+if(exists("P_bound")==FALSE) P_bound = c(0.02,1)  # Soft penalty bounds for P 
 if(exists("KOBE.plot")==FALSE) KOBE.plot = TRUE # Produces JABBA Kobe plot 
 if(exists("KOBE.type")==FALSE) KOBE.type = c("ICCAT","IOTC")[2] # ICCAT uses 3 colors; IOTC 4 (incl. orange) 
+if(exists("SP.plot")==FALSE) SP.plot = c("standard","phase")[2] # Produces standard or 'Kobe phase' SP plot  
 if(exists("Biplot")==FALSE) Biplot= TRUE # Produces a "post-modern" biplot with buffer and target zones (Quinn & Collie 2005)
 if(exists("save.trajectories")==FALSE) save.trajectories =FALSE # saves posteriors of P=B/K, B/Bmsy and H/Hmsy as .RData object 
 if(exists("harvest.label")==FALSE) harvest.label = c("Hmsy","Fmsy")[2] # choose label preference H/Hmsy versus Fmsy
@@ -33,19 +35,13 @@ if(exists("save.projections")==FALSE) save.projections = FALSE# saves projection
 if(exists("Reproduce.seed")==FALSE) Reproduce.seed = FALSE # If FALSE a random seed assigned to each run (default)
 if(exists("TACint")==FALSE) TACint = mean(catch[nrow(catch)-3,2]:catch[nrow(catch),2]) # use mean catch from last years
 if(exists("imp.yr")==FALSE) imp.yr = as.numeric(format(Sys.Date(), "%Y"))+1 # use next year from now
-if(exists("init.values")==FALSE) init.values =FALSE # Allows to add manual starting values for K, r, q
-if(exists("sigmaobs_bound")==FALSE) sigmaobs_bound = 1 # Adds an upper bound to the observation variance  
-if(exists("sigmaproc_bound")==FALSE) sigmaproc_bound = 0.2 # Adds an upper bound to the process variance  
-if(exists("P_bound")==FALSE) P_bound = c(0.03,1.)  # Soft penalty bounds for P 
-if(exists("q_bounds")==FALSE) q_bounds= c(10^-30,1000) # Defines lower and upper bounds for q 
-if(exists("K_bounds")==FALSE) K_bounds= c(0.01,10^10) # Defines lower and upper bounds for q 
-if(exists("add.catch.CV")==FALSE) add.catch.CV =FALSE # Use estimation as a routine (increases stability)  
-if(exists("catch.cv")==FALSE) catch.cv = 0.05 # Use estimation as a routine (increases stability)  
-if(exists("CatchOnly")==FALSE) CatchOnly = FALSE # Use estimation as a routine (increases stability)  
-if(exists("jabba2FRL")==FALSE) jabba2FRL = FALSE
+if(exists("st.value")==FALSE) st.value =FALSE
+
 # Save entire posterior as .RData object
 if(exists("save.all")==FALSE) save.all = FALSE #  
 #><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>><>
+
+
 
 
 #-------------------------
@@ -61,37 +57,14 @@ years=catch[,1]
 styr = min(years)
 endyr = max(years)
 n.years = length(years)
-styr.catch = min(catch[,1])
-styr.C = styr.catch-styr+1 
-
-conv.catch = as.numeric(rbind(matrix(rep(NA,(styr.C-1)*n.catches),styr.C-1,n.catches),as.matrix(catch[,-1])))
-Catch=matrix(conv.catch,nrow=n.years,ncol=n.catches)
-Catch[Catch<0.000001] = 0.000001 # Replace any NA or zero by small constant 
-
-
-
-if(CatchOnly==FALSE){
 styr.cpue = min(cpue[,1])
 styr.I = styr.cpue-styr+1 
+
+
 # Convert input data to matrices for JAGS input
 conv.cpue = as.numeric(rbind(matrix(rep(NA,(styr.I-1)*n.indices),styr.I-1,n.indices),as.matrix(cpue[,-1])))
 CPUE=matrix(conv.cpue,nrow=n.years,ncol=n.indices)
-}else{
-CPUE.plot =FALSE  
-CPUE = Catch  
-CPUE[,1] = NA   
-CPUE[1,1] = 1
-cpue = data.frame(Year=years,CatchOnly=CPUE[,1])
-SE.I = FALSE
-add.catch.CV =FALSE
-sigma.est = FALSE
-sets.q =1
-sets.var=1
-n.indices = 1
-catches = "CatchOnly"
-n.catches = length(catches)
-styr.I=styr.C
-}  
+
 
 if(SE.I==FALSE){
   se = cpue  
@@ -103,28 +76,12 @@ if(SE.I==FALSE){
   se2 = matrix(ifelse(is.na(conv.se),0.3^2,conv.se)^2,n.years,n.indices)+fixed.obsE^2#/2
 }
 
+conv.catch = as.numeric(rbind(matrix(rep(NA,(styr.I-1)*n.catches),styr.I-1,n.catches),as.matrix(catch[,-1])))
+Catch=matrix(conv.catch,nrow=n.years,ncol=n.catches)
+Catch[is.na(Catch)] = 0 # Replace any NA by zero 
 
 # Total Catch
 TC = apply(Catch,1,sum)
-
-# Catch CV option.
-if(add.catch.CV==TRUE){
-if(length(catch.cv)>1) {CV.C =catch.cv[,2]} else {CV.C = rep(catch.cv,length(TC))}   
-  cat(paste0("\n","><> Run  with Catch Estimation CV <><","\n","\n"))
-} else {
-  cat(paste0("\n","><> Run with Catch assumed known <><","\n","\n"))
-}
-
-# hindcast option
-if(exists("tails")==FALSE) tails = max(years)
-if(tails<max(years)){
-  cpue.raw = read.csv(paste0(File,"/",assessment,"/cpue",assessment,".csv"))  
-  cpue.raw = cpue.raw[which(cpue.raw[,1]%in%years),which(colnames(cpue.raw)%in%colnames(cpue))]   
-} else {
-  cpue.raw = cpue
-}
-
-
 
 #------------
 # Plot Catch
@@ -144,16 +101,14 @@ dev.off()
 #---------------------
 # Index color palette
 #---------------------
-jabba.colors = as.character(c('#e6194b', "#3cb44b", "#ffe119",
+jabba.colors = as.character(rep(c('#e6194b', "#3cb44b", "#ffe119",
                                   "#0082c8","#f58231", "#911eb4",
                                   "#46f0f0", "#f032e6", "#d2f53c",
-                                  "#fabebe", "#008080","#e6beff", "#aa6e28",rainbow(10)))
+                                  "#fabebe", "#008080","#e6beff", "#aa6e28"),2))
 #--------------------
 # Set seed
 #--------------------
-if(Reproduce.seed==FALSE){
-  get_seed = ceiling(runif(1,min=0,max=1e6)) } else {get_seed = 123}
-set.seed(get_seed)  
+if(Reproduce.seed==FALSE){ set.seed(ceiling(runif(1,min=0,max=1e6))) } else {set.seed(123)}
 
 #---------------------------------------------------------------------------
 # CPUE run State-Space model for averaging CPUE
@@ -195,7 +150,7 @@ if(CPUE.plot==TRUE){
         fakesigma.fixed <- sigma.fixed # Prevent unused variable error msg    
         ",append=TRUE)  
   }else{ cat(" 
-             isigma2 <- pow(sigma.fixed+eps,-2) 
+      isigma2 <- pow(sigma.fixed+eps,-2) 
              sigma2 <- pow(isigma2,-1)
              sigma <- sqrt(sigma2)
              
@@ -394,7 +349,7 @@ get_beta <- function(mu,CV,Min=0,Prior="x"){
 #--------------------------------------------------
 
 get_gamma <- function(mu,CV,Prior="x"){
-  a = seq(0.00001,10000,0.0001)
+  a = seq(0.0001,1000,0.0001)
   b = a/mu
   s2 = (a/b^2)
   sdev = sqrt(s2)
@@ -416,14 +371,13 @@ get_gamma <- function(mu,CV,Prior="x"){
 #--------------------------------------------------
 plot_lnorm <- function(mu,CV,Prior="x"){
   sdev= sqrt(log(CV^2+1))
-  rand.pr = rlnorm(1000,log(mu)-0.5*sdev^2,sdev)
+  rand.pr = rlnorm(1000,log(mu),sdev)
   x = seq(min(rand.pr),quantile(rand.pr,0.995),max(rand.pr/500))  
   pdf = dlnorm(x,log(mu),sdev)  
   plot(x,pdf,type="l",xlim=range(x),xlab=paste(Prior),ylab="",yaxt="n")
   polygon(c(x,rev(x)),c(rep(0,length(x)),rev(ifelse(pdf==Inf,100000,pdf))),col="grey")
   return(c(mu,sdev))
 }
-
 
 #------------------------------------
 # Function kobeJabba for FLR
@@ -472,15 +426,14 @@ if(r.dist=="range"){
 # Prepare K prior
 #----------------------------------------------------
 if(K.dist=="range"){
-  log.K =  mean(log(K.prior)) 
+  log.K = mean(log(K.prior))
   sd.K= abs(log.K - log(K.prior[1]))/2
-  log.K = mean(log(K.prior))+0.5*sd.K^2 # Will be back-bias corrected in lognorm function
   CV.K = sqrt(exp(sd.K^2)-1)
 } else {
   
+  log.K = log(K.prior[1])
   CV.K = K.prior[2]
   sd.K=sqrt(log(CV.K^2+1))
-  log.K = log(K.prior[1])#-0.5*sd.K^2
 }
 
 
@@ -489,7 +442,7 @@ if(K.dist=="range"){
 #----------------------------------------------------------
 
 # For Pella-Tomlinson
-if(Model==3 | Model==4){ 
+if(Model==3){ 
   #-----------------------------------------------
   # find inflection point
   ishape = NULL
@@ -515,15 +468,14 @@ png(file = paste0(input.dir,"/Priors_",assessment,"_",Scenario,".png"), width = 
     res = 200, units = "in")
 par(Par)
 K.pr = plot_lnorm(exp(log.K),CV.K,Prior="K")
-r.pr = plot_lnorm(mu=exp(log.r),CV=CV.r,Prior="r")
-
 
 if(psi.dist=="beta"){
   psi.pr = get_beta(mu=psi.prior[1],CV=psi.prior[2],Min=0,Prior=paste0("Prior B(",years[1],")/K"))} else {
-  psi.pr = plot_lnorm(mu=psi.prior[1],CV=psi.prior[2],Prior=paste0("Prior B(",years[1],")/K"))  
+    psi.pr = plot_lnorm(mu=psi.prior[1],CV=psi.prior[2],Prior=paste0("Prior B(",years[1],")/K"))  
   }
 
 
+r.pr = plot_lnorm(mu=exp(log.r),CV=CV.r,Prior="r")
 mtext(paste("Density"), side=2, outer=TRUE, at=0.5,line=1,cex=0.9)
 dev.off() 
 
@@ -538,29 +490,15 @@ png(file = paste0(input.dir,"/Production",assessment,"_",Scenario,".png"), width
 par(Par)
 
 # Get Bmsy/B0 as a fucntion of M 
-Pmsy=(m)^(-1/(m-1))
+Bmsy=(m)^(-1/(m-1))
 P = seq(0.0001,1,0.001) 
 SP = ifelse(P>Plim,r.pr[1]/(m-1)*P*(1-P^(m-1)),r.pr[1]/(m-1)*P*(1-P^(m-1))*4*P)
 #if(is.null(refBmsy)==TRUE) refBmsy = Bmsy
 plot(P,SP/max(SP),type="l",ylab="Relative Yield",xlab="B/B0",lwd=2)
 mtext(paste("Relative Yield"), side=2, outer=TRUE, at=0.6,line=1,cex=0.9)
 legend("topright",c("SPM"),col=c(1),lwd=2,bty="n")  
-
-
-if(Model==4){
-  # shape density
-  #dm = dgamma(seq(0.001,5,0.1),5,5)*m
-  dm = dlnorm((seq(0.001,5,0.1)),log(m),shape.CV)
-  dm = dm/max(dm)
-  bmsyk  = (seq(0.001,5,0.1))^(-1/(seq(0.001,5,0.1)-1))
-  
-  polygon(c(bmsyk,rev(bmsyk)),c(dm,rep(0,length(dm))),col="grey",border=0)  
-}
-abline(v=Pmsy,lty=2)
-mtext(paste("Relative Yield"), side=2, outer=TRUE, at=0.6,line=1,cex=0.9)
-legend("topright",c("SPM"),col=c(1),lwd=2,bty="n")  
+abline(v=Bmsy,lty=2)
 dev.off()
-
 
 # Note PRIORS and save input subfolder
 Priors =rbind(K.pr,psi.prior,c(r.pr[1],CV.r))
@@ -614,72 +552,27 @@ nI = ncol(CPUE) # number of CPUE series
 stI = ifelse(proc.dev.all==TRUE,1, c(1:n.years)[is.na(apply(CPUE,1,mean,na.rm=TRUE))==FALSE][1]) #first year with CPUE
 
 
-# Initial starting values (new Eq)
-inits <- function(){list(K= rlnorm(1,log.K,0.3),r = rlnorm(1,r.pr[1],r.pr[2]) ,q = runif(nq,min(CPUE,na.rm=T)/max(catch[,-1],na.rm=T),max(CPUE,na.rm=T)/max(catch[,-1],na.rm=T)), isigma2.est=runif(1,20,100), itau2=runif(nvar,80,200))}
+# Initial starting values
+inits <- function(){list(K= rlnorm(1,log.K,0.3),q = runif(nq,0.005,0.5), isigma2.est=runif(1,20,100), itau2=runif(nvar,80,200))}
 
 # starting value option
-if(init.values==TRUE){
-inits <- function(){list(K= init.K,r=init.r,q = init.q, isigma2.est=runif(1,20,100), itau2=runif(nvar,80,200))}
+if(st.value==TRUE){
+inits <- function(){list(K= K.init,r=r.init,q = q.init, isigma2.est=runif(1,20,100), itau2=runif(nvar,80,200))}
 }
 
 # JABBA input data 
-surplus.dat = list(N=n.years, TC = TC,I=CPUE,SE2=se2,r.pr=r.pr,psi.pr=psi.pr,K.pr = K.pr,
+surplus.dat = list(N=n.years, TC = TC,I=CPUE,SE2=se2,m=m,r.pr=r.pr,psi.pr=psi.pr,K.pr = K.pr,
                    nq=nq,nI = nI,nvar=nvar,sigma.fixed=ifelse(sigma.proc==TRUE,0,sigma.proc),
-                   sets.var=sets.var, sets.q=sets.q,Plim=Plim,slope.HS=slope.HS,
-                   nTAC=nTAC,pyrs=pyrs,TAC=TAC,igamma = igamma,stI=stI,TACint =TACint,pen.bk = rep(0,n.years),proc.pen=0,K.pen = 0,
-                   obs.pen = rep(0,nvar),P_bound=P_bound,q_bounds=q_bounds,sigmaobs_bound=sigmaobs_bound,sigmaproc_bound=sigmaproc_bound,K_bounds=K_bounds,mu.m=m)
+                   sets.var=sets.var, sets.q=sets.q,pen.bk = rep(0,n.years),Plim=Plim,slope.HS=slope.HS,
+                   nTAC=nTAC,pyrs=pyrs,TAC=TAC,igamma = igamma,stI=stI,TACint =TACint,P_bound=P_bound,proc.pen=0)
+
 
 # JAGS model file
 JABBA = "JABBA.jags"
 
 
 # PARAMETERS TO MONITOR
-params <- c("K","r", "q", "psi","sigma2", "tau2","m","Hmsy","SBmsy", "MSY", "BtoBmsy","HtoHmsy","CPUE","Proc.Dev","P","SB","H","prP","prBtoBmsy","prHtoHmsy","TOE")
-
-
-#-----------------------------------------------
-# If shape parameter is estimated (Model =4)
-if(Model==4){
-surplus.dat$m.CV = shape.CV }
-#-----------------------------------------------
-# If Catch Estimation with CV is used
-if(add.catch.CV==TRUE){
-surplus.dat$CV.C = CV.C  
-params = c(params,"estC")
-#P_bound[1] = 10^-10 # No Contraint needed 
-}
-
-
-
-
-#--------------------------
-# Capture Settings
-#--------------------------
-Settings = surplus.dat
-Settings$Model.type = Mod.names
-Settings$add.catch.CV = add.catch.CV
-Settings$catch.cv = catch.cv
-Settings$proc.dev.all = proc.dev.all
-Settings$Do.Projection = Projection
-Settings$TAC.implementation = imp.yr
-Settings$catch.metric = catch.metric
-Settings$harvest.label = harvest.label
-Settings$Run.CPUE.avg.tool = CPUE.plot  
-Settings$Use.avg.CPUE = meanCPUE
-Settings$Specify.init.values =init.values 
-Settings$save.trajectories = save.trajectories
-Settings$save.large.posterior.object = save.all 
-Settings$Seed = get_seed
-Settings$MCMC.ni = ni
-Settings$MCMC.saved.steps = nt
-Settings$MCMC.burnin = nb
-Settings$MCMC.Chains = nc
-Settings$MCMC.ni = ni
-Settings$MCMC.saved = nsaved 
-capture.output( Settings, file=paste0(input.dir,"/Settings.txt"))
-#-------------------------------------------------------------------
-
-
+params <- c("K","r", "q", "psi","sigma2", "tau2","m","Hmsy","SBmsy", "MSY", "BtoBmsy","HtoHmsy","CPUE","Proc.Dev","P","SB","prP","prBtoBmsy","prHtoHmsy","TOE")
 
 
 cat(paste0("\n","><> RUN ",Mod.names," model for ",assessment," ",Scenario," in JAGS <><","\n","\n"))
@@ -696,28 +589,11 @@ cat("
     #Catchability coefficients
     for(i in 1:nq)
     {   
-    q[i] ~ dunif(q_bounds[1],q_bounds[2])    
+    q[i] ~ dunif(eps,100)    
     }  
     
-    # Process variance prior
-    isigma2.est ~ dgamma(igamma[1],igamma[2])
-    
-    # Carrying Capacity SB0
-    K ~ dlnorm(log(K.pr[1]),pow(K.pr[2], -2))
-    
-    # informative priors for Hmsy as a function of r
-    r ~ dlnorm(log(r.pr[1]),pow(r.pr[2],-2))  
     
     ")
-   
-if(Model==4){
-  cat("
-      # Shape m prior
-      m ~ dlnorm(log(mu.m),pow(m.CV,-2))
-      ",append=TRUE)  
-  }else{ cat(" 
-      m <- mu.m     
-    ",append=TRUE)}
 
 if(psi.dist =="beta"){
   cat("
@@ -765,6 +641,8 @@ if(sigma.est==TRUE){
       # note total observation error (TOE)     
       TOE[t,i] <- sqrt(var.obs[t,i]) # Total observation variance
       
+      
+
       }}
       ",append=TRUE)  
 }else{ cat(" 
@@ -772,7 +650,7 @@ if(sigma.est==TRUE){
            for(i in 1:nvar)
            {
            # Observation error
-           itau2[i]~ dgamma(4,0.01)
+           itau2[i]~ dgamma(4,1)
            tau2[i] <- 1/itau2[i]
            }
            
@@ -791,23 +669,18 @@ if(sigma.est==TRUE){
            
            ",append=TRUE)}
 
-# Run standard JABBA
-if(add.catch.CV==FALSE){
+# Run rest of code  
 cat("  
-for(t in 1:N){    
-estC[t] <- TC[t]
-}
-",append=TRUE)} else {
-  cat("  
-for(t in 1:N){    
-      estC[t] ~ dlnorm(log(TC[t]),pow(CV.C[t],-2))
-}
-",append=TRUE)}
-  
-cat("  
+    # Process variance prior
+    isigma2.est ~ dgamma(igamma[1],igamma[2])
     
-
-  
+    # Carrying Capacity SB0
+    K ~ dlnorm(log(K.pr[1]),pow(K.pr[2], -2))
+    
+    # informative priors for Hmsy as a function of r
+    r ~ dlnorm(log(r.pr[1]),pow(r.pr[2],-2))
+    
+    
     #Process equation
     Pmean[1] <- log(psi)
     iPV[1] <- ifelse(1<(stI),10000,isigma2) # inverse process variance
@@ -818,17 +691,16 @@ cat("
     for (t in 2:N) 
     {
     Pmean[t] <- ifelse(P[t-1] > Plim,
-    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1)) - estC[t-1]/K,0.001)),
-    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1))*P[t-1]*slope.HS - estC[t-1]/K,0.001)))
+    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1)) - TC[t-1]/K,0.005)),
+    log(max(P[t-1] +  r/(m-1)*P[t-1]*(1-pow(P[t-1],m-1))*P[t-1]*slope.HS - TC[t-1]/K,0.005)))
     iPV[t] <- ifelse(t<(stI),10000,isigma2) # inverse process variance
     P[t] ~ dlnorm(Pmean[t],iPV[t])
     penB[t]  <- ifelse(P[t]<(P_bound[1]),log(K*P[t])-log(K*(P_bound[1])),ifelse(P[t]>P_bound[2],log(K*P[t])-log(K*(P_bound[2])),0)) # penalty if Pmean is outside viable biomass
     }
     
-    
     # Process error deviation 
     for(t in 1:N){
-    Proc.Dev[t] <- log(P[t]*K)-log(exp(Pmean[t])*K)} 
+    Proc.Dev[t] <- P[t]-exp(Pmean[t])} 
     
     # Enforce soft penalties on bounds for P
     for(t in 1:N){
@@ -851,12 +723,10 @@ cat("
     { 
     Imean[t,i] <- log(q[sets.q[i]]*P[t]*K);
     I[t,i] ~ dlnorm(Imean[t,i],(ivar.obs[t,i]));
-    #CPUE[t,i]  ~ dlnorm(Imean[t,i],(ivar.obs[t,i]))#q[sets.q[i]]*P[t]*K
-    CPUE[t,i]  <- q[sets.q[i]]*P[t]*K
+    CPUE[t,i] <- q[sets.q[i]]*P[t]*K
+    }}
     
-}}
     
-  
     #Management quantaties
     SBmsy_K <- (m)^(-1/(m-1))
     SBmsy <- SBmsy_K*K
@@ -871,21 +741,10 @@ cat("
     }
     
     
-    # Enforce soft penalty on K if < K_bounds >  
-    K.pen ~ dnorm(penK,1000) # enforce penalty 
-    penK  <- ifelse(K<(K_bounds[1]),log(K)-log(K_bounds[1]),ifelse(K>K_bounds[2],log(K)-log(K_bounds[2]),0)) # penalty if Pmean is outside viable biomass
-    
-
     # Enforce soft penalty on process deviance if sigma.proc > 0.2 
     proc.pen ~ dnorm(penProc,1000) # enforce penalty 
-    penProc  <- ifelse(sigma>sigmaproc_bound,log(sigma)-log(sigmaproc_bound),0) 
-     
+    penProc  <- ifelse(sigma>0.2,log(sigma)-log(0.2),0) 
     
-    # Enforce soft penalty on observation error if sigma.obs > sigma_bound 
-    for(i in 1:nvar){
-    obs.pen[i] ~ dnorm(penObs[i],1000) # enforce penalty 
-    penObs[i]  <- ifelse(pow(tau2[i],0.5)>sigmaobs_bound,log(pow(tau2[i],0.5))-log(sigmaobs_bound),0) 
-    }
     
     ", append=TRUE)
 
@@ -896,13 +755,13 @@ if(Projection==TRUE){
       # Project first year into the future
       prPmean[1,i] <- ifelse(P[N] > Plim,
       log(max(P[N] +  Hmsy/(1-1/m)*P[N]*(1-pow(P[N],m-1)) - TACint/K,0.005)),
-      log(max(P[N] +  Hmsy/(1-1/m)*P[N]*(1-pow(P[N],m-1))*4*P[N] - TACint/K,0.001)))
+      log(max(P[N] +  Hmsy/(1-1/m)*P[N]*(1-pow(P[N],m-1))*4*P[N] - TACint/K,0.005)))
       prP[1,i] ~ dlnorm(prPmean[1,i],isigma2) 
       # Project all following years
       for(t in 2:pyrs){
       prPmean[t,i] <- ifelse(prP[t-1,i] > Plim,
       log(max(prP[t-1,i] +  Hmsy/(1-1/m)*prP[t-1,i]*(1-pow(prP[t-1,i],m-1)) - TAC[t-1,i]/K,0.001)),
-      log(max(prP[t-1,i] +  Hmsy/(1-1/m)*prP[t-1,i]*(1-pow(prP[t-1,i],m-1))*slope.HS*prP[t-1,i] - TAC[t-1,i]/K,0.001)))
+      log(max(prP[t-1,i] +  Hmsy/(1-1/m)*prP[t-1,i]*(1-pow(prP[t-1,i],m-1))*slope.HS*prP[t-1,i] - TAC[t-1,i]/K,0.005)))
       # process error (as monte-carlo simular)
       prP[t,i] ~ dlnorm(prPmean[t,i],isigma2)}
       for(t in 1:pyrs){
@@ -953,7 +812,7 @@ output.dir = paste0(File,"/",assessment,"/",Scenario,"_",Mod.names,"/Output")
 dir.create(output.dir, showWarnings = FALSE)
 
 # run some mcmc convergence tests
-par.dat= data.frame(posteriors[params[c(1:7)]])
+par.dat= data.frame(posteriors[params[c(1:6)]])
 geweke = geweke.diag(data.frame(par.dat))
 pvalues <- 2*pnorm(-abs(geweke$z))
 pvalues
@@ -995,117 +854,23 @@ N=n.years
 
 
 
+# Safe posteriors (Produces large object!)
+if(save.all==TRUE) save(posteriors,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_posteriors"))
+
 #-------------------------------------------------------------------------
 # Save parameters, results table and current status posterior in csv files
 #-------------------------------------------------------------------------
-
-# Safe posteriors (Produces large object!)
-if(save.all==TRUE) save(posteriors,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_posteriors.rdata"))
-
 
 # Save model estimates and convergence p-values
 write.csv(data.frame(results),paste0(output.dir,"/Estimates_",assessment,"_",Scenario,".csv"))
 
 # Make standard results table with parameter estimates and reference points
-Table = rbind(data.frame(results)[c("K","r","psi","sigma2","m"),1:3],data.frame(ref.points))  
+Table = rbind(data.frame(results)[c("K","r","psi","sigma2"),1:3],data.frame(ref.points))  
 Table[4,] = round(sqrt((Table[4,])),3) 
 rownames(Table)[4] = "sigma.proc"
 write.csv(Table,paste0(output.dir,"/Results_",assessment,"_",Scenario,".csv"))
 #Save posterior of recent assessment year (KOBE posterior)
 write.csv(data.frame(BtoBmsy=B_Bmsy.cur,FtoFmsy=H_Hmsy.cur),paste0(output.dir,"/Status_posterior",assessment,".csv"))  
-
-#-----------------------------------------------
-# Stock trajectories
-#-----------------------------------------------
-
-Bt = posteriors$SB
-Ht = posteriors$H
-Bt_Bmsy = posteriors$BtoBmsy
-Ht_Hmsy = posteriors$HtoHmsy
-Bt_K = posteriors$P
-Stock_trj = cbind(t(apply(Bt,2,quantile,c(0.5,0.025,0.975))),
-                  t(apply(Ht,2,quantile,c(0.5,0.025,0.975))),
-                  t(apply(Bt_Bmsy,2,quantile,c(0.5,0.025,0.975))),
-                  t(apply(Ht_Hmsy,2,quantile,c(0.5,0.025,0.975))),t(apply(Bt_K,2,quantile,c(0.5,0.025,0.975))))
-
-
-colnames(Stock_trj) = paste0(rep(c("Bt",ifelse(harvest.label=="Hmsy","Ht","Ft"),"Bt_Bmsy",ifelse(harvest.label=="Hmsy","Ht_Hmsy","Ft_Fmsy"),"Bt_K"),each=3),rep(c(".Median",".LCI95%",".UCI95%"),4))
-rownames(Stock_trj) = years
-
-
-# Save results
-write.csv(Stock_trj,paste0(output.dir,"/Stock_trj.csv"))
-
-if(save.trajectories==TRUE){
-  cat(paste0("\n","><> Saving Posteriors of FRP trajectories <><","\n"))
-  
-  # FRP trajectories
-  trajectories = array(NA,c(nsaved,n.years,3))
-  trajectories[,,1] = posteriors$P 
-  trajectories[,,2] = posteriors$BtoBmsy 
-  trajectories[,,3] = posteriors$HtoHmsy
-  
-  kb=kobeJabba(trajectories,years[1])
-  save(kb,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_trajectories.Rdata"))
-  
-}
-
-
-
-#------------------
-# Goodness-of-Fit
-#------------------
-DIC =round(mod$BUGSoutput$DIC,1)
-
-if(CatchOnly==FALSE){
-# get residuals
-Resids = NULL
-for(i in 1:n.indices){
-  Resids =rbind(Resids,log(CPUE[,i])-log(apply(posteriors$CPUE[,,i],2,quantile,c(0.5))))   
-}
-
-# Standardized Residuals
-StResid = NULL
-for(i in 1:n.indices){
-  StResid =rbind(StResid,log(CPUE[,i]/apply(posteriors$CPUE[,,i],2,quantile,c(0.5)))/
-                   apply(posteriors$TOE[,,i],2,quantile,c(0.5))+0.5*apply(posteriors$TOE[,,i],2,quantile,c(0.5)))        
-}
-
-Nobs =length(as.numeric(Resids)[is.na(as.numeric(Resids))==FALSE])
-DF = Nobs-npar
-RMSE = round(100*sqrt(sum(Resids^2,na.rm =TRUE)/DF),1)
-SDNR = round(sqrt(sum(StResid^2,na.rm =TRUE)/(Nobs-1)),2)
-Crit.value = (qchisq(.95, df=(Nobs-1))/(Nobs-1))^0.5
-# Produce statistice describing the Goodness of the Fit
-} else {
-  
-  Nobs =DF = RMSE = SDNR = Crit.value = NA
-  
-}
-
-GOF = data.frame(Stastistic = c("N","p","DF","SDNR","RMSE","DIC"),Value = c(Nobs,npar,DF,SDNR,RMSE,DIC))
-write.csv(GOF,paste0(output.dir,"/GoodnessFit_",assessment,"_",Scenario,".csv"))
-
-# Save Obs,Fit,Residuals
-jabba.res = NULL
-if(CatchOnly==FALSE){
-for(i in 1:n.indices){
-  
-  Yr = years
-  Yr = min(Yr):max(Yr)
-  yr = Yr-min(years)+1
-  
-  exp.i = apply(posteriors$CPUE[,,i],2,quantile,c(0.5))[is.na(cpue.raw[,i+1])==F]
-  expLCI.i = apply(posteriors$CPUE[,,i],2,quantile,c(0.025))[is.na(cpue.raw[,i+1])==F]
-  expUCI.i = apply(posteriors$CPUE[,,i],2,quantile,c(0.975))[is.na(cpue.raw[,i+1])==F]
-  
-  obs.i = cpue.raw[is.na(cpue.raw[,i+1])==F,i+1]
-  sigma.obs.i = (apply(posteriors$TOE[,,i],2,quantile,c(0.5)))[is.na(cpue.raw[,i+1])==F]
-  
-  yr.i = Yr[is.na(cpue.raw[,i+1])==F]
-  jabba.res = rbind(jabba.res,data.frame(scenario=Scenario,name=names(cpue)[i+1],year=yr.i,obs=obs.i,sigma.obs=sigma.obs.i,hat=exp.i,hat.lci=expLCI.i,hat.uci=expUCI.i,residual=log(obs.i)-log(exp.i),tails=tails))  
-}
-}
 
 
 #----------------
@@ -1119,31 +884,9 @@ par(Par)
 
 cord.x <- c(years,rev(years))
 y<-rep(0,length(years))
-plot(years,(TC),type="l",ylim=c(0,max(TC,na.rm=T)),lty=1,lwd=1.3,xlab="Year",ylab=paste0("Catch ",catch.metric),main="")
+plot(years,(TC),type="l",ylim=c(0,max(TC)),lty=1,lwd=1.3,xlab="Year",ylab=paste0("Catch ('000 t",catch.metric,")"),main="")
 polygon(cord.x,c(TC,rev(y)),col="gray",border=1,lty=1)
 dev.off()
-
-# if Catch estimated with CV
-if(add.catch.CV==TRUE){
-  Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.7,0), tck = -0.02,cex=0.8)
-  
-  png(file = paste0(output.dir,"/Catch.fit_",assessment,"_",Scenario,".png"), width = 5, height = 3.5, 
-      res = 200, units = "in")
-  par(Par)
-  # estimated Catch
-  estC = posteriors$estC
-  predC = apply(estC,2,quantile,c(0.5,0.025,0.975)) 
-  cord.x <- c(years,rev(years))
-  cord.y<-c(predC[2,],rev(predC[3,]))
-  plot(years,(TC),type="n",ylim=c(0,max(predC,na.rm=T)),lty=1,lwd=1.3,xlab="Year",ylab=paste0("Catch ",catch.metric),main="")
-  polygon(cord.x,cord.y,col="gray",border=0,lty=1)
-  lines(years,predC[1,],lwd=2,col=4)
-  points(years,(TC),pch=21,bg=0,cex=1.5)
-  legend("topright",c("Observed","Predicted"),pch=c(21,-1),bg=0,lwd=c(-1,2),col=c(1,4),bty="n")
-  dev.off() 
-  
-}
-
 
 #------------------------------
 # Plot Posteriors
@@ -1183,12 +926,8 @@ for(i in 1:length(node_id))
     
     polygon(c(sort(rpr),rev(sort(rpr))),c(prior,rep(0,length(sort(rpr)))),col=gray(0.4,1))
     polygon(c(pdf$x,rev(pdf$x)),c(pdf$y,rep(0,length(pdf$y))),col=gray(0.7,0.7))
-    legend('right',c("Prior","Posterior"),pch=22,pt.cex=1.5,pt.bg = c(grey(0.4,1),grey(0.8,0.6)),bty="n")
-    PPVR = round((sd(post.par)/mean(post.par))^2/(sd(rpr)/mean(rpr))^2,3)  
-    PPVM = round(mean(post.par)/mean(rpr),3)
-    legend("topright",c(paste("PPMR =",PPVM),paste("PPVR =",PPVR)),cex=1,bty="n")  
-    
-    }  
+    legend('topright',c("Prior","Posterior"),pch=22,pt.cex=1.5,pt.bg = c(grey(0.4,1),grey(0.8,0.6)),bty="n")
+  }  
   
   
   if(i==2){
@@ -1197,34 +936,15 @@ for(i in 1:length(node_id))
     pdf = stats::density(post.par,adjust=2) 
     prior = dlnorm(sort(rpr),log(Prs[1,i]),Prs[2,i])   
     plot(pdf$x,pdf$y,type="l",ylim=range(prior,pdf$y),xlim=range(c(post.par,quantile(rpr,c(0.0001,0.95)))),yaxt="n",xlab=paste(node_id[i]),ylab="",xaxs="i",yaxs="i")
+    
     polygon(c(sort(rpr),rev(sort(rpr))),c(prior,rep(0,length(sort(rpr)))),col=gray(0.4,1))
     polygon(c(pdf$x,rev(pdf$x)),c(pdf$y,rep(0,length(pdf$y))),col=gray(0.7,0.7))
-    PPVR = round((sd(post.par)/mean(post.par))^2/(sd(rpr)/mean(rpr))^2,3)  
-    PPVM = round(mean(post.par)/mean(rpr),3)
-    legend("topright",c(paste("PPMR =",PPVM),paste("PPVR =",PPVR)),cex=1,bty="n")
-    
-    
-    }
+  }
   
   if(i==3){
-    if(Model<4){
-      plot(1,1,type="n",xlim=range(0.5,2.5),yaxt="n",xlab=paste(node_id[i]),ylab="",xaxs="i",yaxs="i")  
-      abline(v=m,lwd=2)}
-    if(Model==4){
-      mpr = rlnorm(10000,log(m),shape.CV) 
-      pdf = stats::density(post.par,adjust=2) 
-      prior = dlnorm(sort(mpr),log(m),shape.CV)   
-      plot(pdf$x,pdf$y,type="l",ylim=range(prior,pdf$y),xlim=range(c(post.par,quantile(rpr,c(0.0001,0.95)))),yaxt="n",xlab=paste(node_id[i]),ylab="",xaxs="i",yaxs="i")
-      
-      polygon(c(sort(mpr),rev(sort(mpr))),c(prior,rep(0,length(sort(rpr)))),col=gray(0.4,1))
-      polygon(c(pdf$x,rev(pdf$x)),c(pdf$y,rep(0,length(pdf$y))),col=gray(0.7,0.7))
-      PPVR = round((sd(post.par)/mean(post.par))^2/(sd(rpr)/mean(rpr))^2,3)  
-      PPVM = round(mean(post.par)/mean(rpr),3)
-      legend("topright",c(paste("PPMR =",PPVM),paste("PPVR =",PPVR)),cex=1,bty="n")
-      
-      
-    }
-  }
+    plot(1,1,type="n",xlim=range(0.5,2.5),yaxt="n",xlab=paste(node_id[i]),ylab="",xaxs="i",yaxs="i")  
+    abline(v=m,lwd=2)}
+  
   
   
   if(i==4){
@@ -1233,21 +953,13 @@ for(i in 1:length(node_id))
       rpr = rbeta(10000,(psi.pr[1]),psi.pr[2]) 
       pdf = stats::density(post.par,adjust=2)  
       prior = dbeta(sort(rpr),psi.pr[1],psi.pr[2])   
-      PPVR = round((sd(post.par)/mean(post.par))^2/(sd(rpr)/mean(rpr))^2,3)  
-      PPVM = round(mean(post.par)/mean(rpr),3)
-      legend("topright",c(paste("PPMR =",PPVM),paste("PPVR =",PPVR)),cex=1,bty="n")
-      
-      } else {
+    } else {
       rpr = rlnorm(10000,log(psi.prior[1]),psi.prior[2]) 
       pdf = stats::density(post.par,adjust=2)  
       prior = dlnorm(sort(rpr),log(psi.prior[1]),psi.prior[2])}
     plot(pdf,type="l",ylim=range(quantile(c(prior,pdf$y,c(0,0.95)))),xlim=range(c(0.5,post.par,pdf$x,quantile(rpr,c(0.001,0.999)))),yaxt="n",xlab=paste(node_id[i]),ylab="",xaxs="i",yaxs="i",main="")
     polygon(c(sort(rpr),rev(sort(rpr))),c(prior,rep(0,length(sort(rpr)))),col=gray(0.4,1))
     polygon(c(pdf$x,rev(pdf$x)),c(pdf$y,rep(0,length(pdf$y))),col=gray(0.7,0.7))
-    PPVR = round((sd(post.par)/mean(post.par))^2/(sd(rpr)/mean(rpr))^2,3)  
-    PPVM = round(mean(post.par)/mean(rpr),3)
-    legend("topright",c(paste("PPMR =",PPVM),paste("PPVR =",PPVR)),cex=1,bty="n")
-    
     #legend('topright',c("Prior","Posterior"),pch=22,pt.cex=1.5,pt.bg = c(grey(0.4,1),grey(0.8,0.6)),bty="n")
   }        
   
@@ -1262,11 +974,7 @@ for(i in 1:length(node_id))
           rpr = 1/rgamma(10000,igamma[1],igamma[2])
           prior = stats::density(rpr,adjust=2)
           polygon(c(prior$x,rev(prior$x)),c(prior$y,rep(0,length(prior$y))),col=gray(0.4,1))
-          PPVR = round((sd(post.par)/mean(post.par))^2/(sd(rpr)/mean(rpr))^2,3)  
-          PPVM = round(mean(post.par)/mean(rpr),3)
-          legend("topright",c(paste("PPMR =",PPVM),paste("PPVR =",PPVR)),cex=1,bty="n")
-          
-          }
+        }
         
         polygon(c(pdf$x,rev(pdf$x)),c(pdf$y,rep(0,length(pdf$y))),col=gray(0.7,0.7))
         #legend('topright',c("Posterior"),pch=22,pt.cex=1.5,pt.bg = c(grey(0.8,0.6)),bty="n")
@@ -1275,6 +983,8 @@ for(i in 1:length(node_id))
 }
 mtext(paste("Density"), side=2, outer=TRUE, at=0.5,line=1,cex=0.9)
 dev.off()   
+
+
 
 #-----------------------------
 # MCMC chains of posteriors
@@ -1307,8 +1017,8 @@ check.yrs = apply(CPUE,1,sum,na.rm=TRUE)
 cpue.yrs = years[check.yrs>0]
 
 #CPUE FITS
-Par = list(mfrow=c(round(n.indices/2+0.01,0),ifelse(n.indices==1,1,2)),mai=c(0.35,0.15,0,.15),omi = c(0.2,0.25,0.2,0) + 0.1,mgp=c(2,0.5,0), tck = -0.02,cex=0.8)
-png(file = paste0(output.dir,"/Fits_",assessment,"_",Scenario,".png"), width = 7, height = ifelse(n.indices==1,5,ifelse(n.indices==2,3.,2.5))*round(n.indices/2+0.01,0), 
+Par = list(mfrow=c(round(n.indices/2+0.01,0),ifelse(n.indices==1,1,2)),mai=c(0.35,0.15,0,.15),omi = c(0.3,0.25,0.2,0) + 0.1,mgp=c(2,0.5,0), tck = -0.02,cex=0.8)
+png(file = paste0(output.dir,"/Fits_",assessment,"_",Scenario,".png"), width = 7, height = ifelse(n.indices==1,5,2.5)*round(n.indices/2+0.01,0), 
     res = 200, units = "in")
 par(Par)
 
@@ -1328,13 +1038,13 @@ for(i in 1:n.indices){
   yr.i = Yr[is.na(CPUE[,i])==F]
   se.i = sqrt(se2[is.na(CPUE[,i])==F,(i)])
   
-  ylim = c(min(fit*0.9,exp(log(cpue.i)-1.96*se.i)/mufit), max(fit*1.05,exp(log(cpue.i)+1.96*se.i)/mufit))
+  ylim = c(min(fit[,check.yrs>0]*0.8,exp(log(cpue.i)-1.96*se.i)/mufit), max(fit[,yr[check.yrs>0]]*1.4,exp(log(cpue.i)+1.96*se.i)/mufit))
   
   cord.x <- c(Yr,rev(Yr))
   cord.y <- c(fit[1,yr],rev(fit[3,yr]))
   
   # Plot Observed vs predicted CPUE
-  plot(years,CPUE[,i],ylab="",xlab="",ylim=ylim,xlim=range(years),type='n',xaxt="n",yaxt="n")
+  plot(years,CPUE[,i],ylab="",xlab="",ylim=ylim,xlim=range(cpue.yrs),type='n',xaxt="n",yaxt="n")
   axis(1,labels=TRUE,cex=0.8)
   axis(2,labels=TRUE,cex=0.8)
   polygon(cord.x,cord.y,col=grey(0.5,0.5),border=0,lty=2)
@@ -1351,10 +1061,9 @@ mtext(paste("Year"), side=1, outer=TRUE, at=0.5,line=1,cex=1)
 mtext(paste("Normalized Index"), side=2, outer=TRUE, at=0.5,line=1,cex=1)
 dev.off()
 
-if(CatchOnly==FALSE){
 #log CPUE FITS
-Par = list(mfrow=c(round(n.indices/2+0.01,0),ifelse(n.indices==1,1,2)),mai=c(0.35,0.15,0,.15),omi = c(0.2,0.25,0.2,0) + 0.1,mgp=c(2,0.5,0), tck = -0.02,cex=0.8)
-png(file = paste0(output.dir,"/logFits_",assessment,"_",Scenario,".png"), width = 7, height = ifelse(n.indices==1,5,ifelse(n.indices==2,3.,2.5))*round(n.indices/2+0.01,0), 
+Par = list(mfrow=c(round(n.indices/2+0.01,0),ifelse(n.indices==1,1,2)),mai=c(0.35,0.15,0,.15),omi = c(0.3,0.25,0.2,0) + 0.1,mgp=c(2,0.5,0), tck = -0.02,cex=0.8)
+png(file = paste0(output.dir,"/logFits_",assessment,"_",Scenario,".png"), width = 7, height = ifelse(n.indices==1,5,2.5)*round(n.indices/2+0.01,0), 
     res = 200, units = "in")
 par(Par)
 
@@ -1396,96 +1105,95 @@ mtext(paste("Year"), side=1, outer=TRUE, at=0.5,line=1,cex=1)
 mtext(paste("Log Index"), side=2, outer=TRUE, at=0.5,line=1,cex=1)
 dev.off()
 
-  # JABBA-residual plot
-  Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
-  png(file = paste0(output.dir,"/Residuals_",assessment,"_",Scenario,".png"), width = 5, height = 3.5, 
-      res = 200, units = "in")
-  par(Par)
-  
-  Resids = NULL
-  for(i in 1:n.indices){
-    Resids =rbind(Resids,log(CPUE[,i])-log(apply(posteriors$CPUE[,,i],2,quantile,c(0.5))))   
-  }
-  
-  plot(Yr,Yr,type = "n",ylim=ifelse(rep(max(Resids,na.rm = T),2)>0.9,range(1.2*Resids,na.rm = T),range(c(-1.3,1.2))),xlim=range(cpue.yrs),ylab="log residuals",xlab="Year")
-  boxplot(Resids,add=TRUE,at=c(Yr),xaxt="n",col=grey(0.8,0.5),notch=FALSE,outline = FALSE)
-  abline(h=0,lty=2)
-  positions=runif(n.indices,-0.2,0.2)
-  
-  for(i in 1:n.indices){
-    for(t in 1:n.years){
-      lines(rep((Yr+positions[i])[t],2),c(0,Resids[i,t]),col=jabba.colors[i])}
-    points(Yr+positions[i],Resids[i,],col=1,pch=21,bg=jabba.colors[i])}
-  mean.res = apply(Resids,2,mean,na.rm =TRUE)
-  smooth.res = predict(loess(mean.res~Yr),data.frame(Yr=cpue.yrs))
-  lines(cpue.yrs,smooth.res,lwd=2)
-  DIC =round(mod$BUGSoutput$DIC,1)
-  # get degree of freedom
-  Nobs =length(as.numeric(Resids)[is.na(as.numeric(Resids))==FALSE])
-  DF = Nobs-npar
-  
-  RMSE = round(100*sqrt(sum(Resids^2,na.rm =TRUE)/DF),1)
-  
-  legend('topright',c(paste0("RMSE = ",RMSE,"%")),bty="n")
-  legend('bottomright',c(paste(indices),"Loess"),bty="n",col=1,pt.cex=1.1,cex=0.75,pch=c(rep(21,n.indices),-1),pt.bg=c(jabba.colors[series],1),lwd=c(rep(-1,n.indices),2))
-  
-  dev.off()
- 
-  #Save Residuals 
-  Res.CPUE = data.frame(Resids)
-  row.names(Res.CPUE) = indices   
-  colnames(Res.CPUE) = paste(Yr)
-  write.csv(Res.CPUE,paste0(output.dir,"/ResCPUE_",assessment,"_",Scenario,".csv"))
-  
-  #---------------------------------------
-  # Stadardized Residuals
-  #--------------------------------------
-  Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
-  png(file = paste0(output.dir,"/StandardizedResids_",assessment,"_",Scenario,".png"), width = 5, height = 3.5, 
-      res = 200, units = "in")
-  par(Par)
-  
-  
-  # Standardized Residuals
-  StResid = NULL
-  for(i in 1:n.indices){
-    StResid =rbind(StResid,log(CPUE[,i]/apply(posteriors$CPUE[,,i],2,quantile,c(0.5)))/
-                     apply(posteriors$TOE[,,i],2,quantile,c(0.5))+0.5*apply(posteriors$TOE[,,i],2,quantile,c(0.5)))        
-  }
-  
-  plot(Yr,Yr,type = "n",ylim=c(min(-1,-1.2*max(abs(StResid),na.rm = T)),max(1,1.2*max(abs(StResid),na.rm = T))),xlim=range(cpue.yrs),ylab="Standardized residuals",xlab="Year")
-  boxplot(StResid,add=TRUE,at=c(Yr),xaxt="n",col=grey(0.8,0.5),notch=FALSE,outline = FALSE)
-  abline(h=0,lty=2)
-  positions=runif(n.indices,-0.2,0.2)
-  
-  for(i in 1:n.indices){
-    for(t in 1:n.years){
-      lines(rep((Yr+positions[i])[t],2),c(0,StResid[i,t]),col=jabba.colors[i])}
-    points(Yr+positions[i],StResid[i,],col=1,pch=21,bg=jabba.colors[i])}
-  mean.res = apply(StResid,2,mean,na.rm =TRUE)
-  smooth.res = predict(loess(mean.res~Yr),data.frame(Yr=cpue.yrs))
-  lines(cpue.yrs,smooth.res,lwd=2)
-  DIC =round(mod$BUGSoutput$DIC,1)
-  SDNR = round(sqrt(sum(StResid^2,na.rm =TRUE)/(Nobs-1)),2)
-  Crit.value = (qchisq(.95, df=(Nobs-1))/(Nobs-1))^0.5
-  legend('topright',c(paste0("SDNR = ",SDNR,"(",round(Crit.value,2),")")),bty="n")
-  legend('bottomright',c(paste(indices),"Loess"),bty="n",col=1,cex=0.75,pt.cex=1.1,pch=c(rep(21,n.indices),-1),pt.bg=c(jabba.colors[series],1),lwd=c(rep(-1,n.indices),2))
-  
-  
-  dev.off()
-  
-  #Save standardized Residuals 
-  StRes.CPUE = data.frame(StResid)
-  row.names(Res.CPUE) = indices   
-  colnames(Res.CPUE) = paste(Yr)
-  write.csv(Res.CPUE,paste0(output.dir,"/StResCPUE_",assessment,"_",Scenario,".csv"))
+
+
+# JABBA-residual plot
+Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
+png(file = paste0(output.dir,"/Residuals_",assessment,"_",Scenario,".png"), width = 5, height = 3.5, 
+    res = 200, units = "in")
+par(Par)
+
+Resids = NULL
+for(i in 1:n.indices){
+  Resids =rbind(Resids,log(CPUE[,i])-log(apply(posteriors$CPUE[,,i],2,quantile,c(0.5))))   
 }
 
-#------------------------------
-# Plot process error deviation
-#------------------------------
+plot(Yr,Yr,type = "n",ylim=ifelse(rep(max(Resids,na.rm = T),2)>0.9,range(1.2*Resids,na.rm = T),range(c(-1.3,1.2))),xlim=range(cpue.yrs),ylab="log residuals",xlab="Year")
+boxplot(Resids,add=TRUE,at=c(Yr),xaxt="n",col=grey(0.8,0.5),notch=FALSE,outline = FALSE)
+abline(h=0,lty=2)
+positions=runif(n.indices,-0.2,0.2)
 
-proc.dev = apply(posteriors$Proc.Dev,2,quantile,c(0.025,0.5,0.975))
+for(i in 1:n.indices){
+  for(t in 1:n.years){
+    lines(rep((Yr+positions[i])[t],2),c(0,Resids[i,t]),col=jabba.colors[i])}
+  points(Yr+positions[i],Resids[i,],col=1,pch=21,bg=jabba.colors[i])}
+mean.res = apply(Resids,2,mean,na.rm =TRUE)
+smooth.res = predict(loess(mean.res~Yr),data.frame(Yr=cpue.yrs))
+lines(cpue.yrs,smooth.res,lwd=2)
+DIC =round(mod$BUGSoutput$DIC,1)
+# get degree of freedom
+Nobs =length(as.numeric(Resids)[is.na(as.numeric(Resids))==FALSE])
+DF = Nobs-npar
+
+RMSE = round(100*sqrt(sum(Resids^2,na.rm =TRUE)/DF),1)
+
+legend('topright',c(paste0("RMSE = ",RMSE,"%")),bty="n")
+legend('bottomright',c(paste(indices),"Loess"),bty="n",col=1,pt.cex=1.1,cex=0.75,pch=c(rep(21,n.indices),-1),pt.bg=c(jabba.colors[series],1),lwd=c(rep(-1,n.indices),2))
+
+dev.off()
+
+#Save Residuals 
+Res.CPUE = data.frame(Resids)
+row.names(Res.CPUE) = indices   
+colnames(Res.CPUE) = paste(Yr)
+write.csv(Res.CPUE,paste0(output.dir,"/ResCPUE_",assessment,"_",Scenario,".csv"))
+
+#---------------------------------------
+# Stadardized Residuals
+#--------------------------------------
+Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
+png(file = paste0(output.dir,"/StandardizedResids_",assessment,"_",Scenario,".png"), width = 5, height = 3.5, 
+    res = 200, units = "in")
+par(Par)
+
+
+# Standardized Residuals
+StResid = NULL
+for(i in 1:n.indices){
+  StResid =rbind(StResid,log(CPUE[,i]/apply(posteriors$CPUE[,,i],2,quantile,c(0.5)))/
+                   apply(posteriors$TOE[,,i],2,quantile,c(0.5))+0.5*apply(posteriors$TOE[,,i],2,quantile,c(0.5)))        
+}
+
+plot(Yr,Yr,type = "n",ylim=c(min(-1,-1.2*max(abs(StResid),na.rm = T)),max(1,1.2*max(abs(StResid),na.rm = T))),xlim=range(cpue.yrs),ylab="Standardized residuals",xlab="Year")
+boxplot(StResid,add=TRUE,at=c(Yr),xaxt="n",col=grey(0.8,0.5),notch=FALSE,outline = FALSE)
+abline(h=0,lty=2)
+positions=runif(n.indices,-0.2,0.2)
+
+for(i in 1:n.indices){
+  for(t in 1:n.years){
+    lines(rep((Yr+positions[i])[t],2),c(0,StResid[i,t]),col=jabba.colors[i])}
+  points(Yr+positions[i],StResid[i,],col=1,pch=21,bg=jabba.colors[i])}
+mean.res = apply(StResid,2,mean,na.rm =TRUE)
+smooth.res = predict(loess(mean.res~Yr),data.frame(Yr=cpue.yrs))
+lines(cpue.yrs,smooth.res,lwd=2)
+DIC =round(mod$BUGSoutput$DIC,1)
+SDNR = round(sqrt(sum(StResid^2,na.rm =TRUE)/(Nobs-1)),2)
+Crit.value = (qchisq(.95, df=(Nobs-1))/(Nobs-1))^0.5
+legend('topright',c(paste0("SDNR = ",SDNR,"(",round(Crit.value,2),")")),bty="n")
+legend('bottomright',c(paste(indices),"Loess"),bty="n",col=1,cex=0.75,pt.cex=1.1,pch=c(rep(21,n.indices),-1),pt.bg=c(jabba.colors[series],1),lwd=c(rep(-1,n.indices),2))
+
+
+dev.off()
+
+#Save standardized Residuals 
+StRes.CPUE = data.frame(StResid)
+row.names(Res.CPUE) = indices   
+colnames(Res.CPUE) = paste(Yr)
+write.csv(Res.CPUE,paste0(output.dir,"/StResCPUE_",assessment,"_",Scenario,".csv"))
+
+# Produce statistice describing the Goodness of the Fit
+GOF = data.frame(Stastistic = c("N","p","DF","SDNR","RMSE","DIC"),Value = c(Nobs,npar,DF,SDNR,RMSE,DIC))
+write.csv(GOF,paste0(output.dir,"/GOF_",assessment,"_",Scenario,".csv"))
 
 #------------------------------
 # Plot process error deviation
@@ -1499,20 +1207,17 @@ png(file = paste0(output.dir,"/ProcDev_",assessment,"_",Scenario,".png"), width 
     res = 200, units = "in")
 par(Par)
 
-ylim = c(min(-0.22,proc.dev),max(0.22,proc.dev))#range(proc.dev)*1.1
+ylim = range(proc.dev)*1.1
 cord.x <- c(years,rev(years))
 cord.y <- c(proc.dev[1,],rev(proc.dev[3,]))
 # Process Error
-plot(years,proc.dev[2,],ylab="Process Error Deviates",xlab="Year",ylim=ylim,type="n")
+plot(years,proc.dev[2,],ylab="Process deviation P[t]",xlab="Year",ylim=ylim,type="n")
 polygon(cord.x,cord.y,col='grey',border=0,lty=2)
 lines(years,proc.dev[2,],lwd=2)
 lines(years,rep(0,length(years)),lty=5)
 
 
 dev.off()
-
-procE.dev = data.frame(Scenario,Yr=years,mu=proc.dev[2,],lci=proc.dev[1,],uci=proc.dev[3,])
-
 
 #-----------------------------------------------------------
 # <><<><<><<><<>< JABBA Management Plots ><>><>><>><>><>><>
@@ -1582,72 +1287,96 @@ lines(years,mu.b[2,],lwd=2,col=1)
 lines(years,rep(1,length(years)),lty=5)
 dev.off()
 
-#-----------------------------------------
-# Produce JABBA SP-phase plot
-#-----------------------------------------
-Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
-png(file = paste0(output.dir,"/SPphase_",assessment,"_",Scenario,".png"), width = 5, height = 4.5, 
-    res = 200, units = "in")
-par(Par)
-m = median(posteriors$m)
-Bit = seq(1,median(posteriors$K),median(posteriors$K)/500)
-Cmsy = Bit*median(posteriors$Hmsy)
-B = apply(posteriors$SB,2,mean)
-Hmsy.sp = median(posteriors$Hmsy) 
-SB0.sp = median(posteriors$K)
-
-SP = Hmsy.sp/(1-1/m)*Bit*(1-(Bit/SB0.sp)^(m-1))
-Bmsy.sp = median(posteriors$SBmsy)
-MSY.sp = quantile(posteriors$SBmsy*posteriors$Hmsy,c(0.025,0.5,0.975))
-green.x = c(max(Bit,B),max(Bit,B),Bmsy.sp,Bmsy.sp,max(Bit))
-green.y = c(Bmsy.sp,0,0,max(SP),max(Cmsy))
-
-
-red.x = c(0,0,Bmsy.sp,Bmsy.sp,0)
-red.y = c(SB0.sp,0,max(SP),SB0.sp,SB0.sp)
-plot(Bit,SP,type = "n",ylim=c(0,max(c(max(TC,na.rm=T)*1.05,max(MSY.sp*1.1)))),xlim=c(0,max(Bit,B)),ylab="Surplus Production (t)",xlab="Spawning Biomass (t)",xaxs="i",yaxs="i")
-rect(0,0,SB0.sp*1.1,SB0.sp*1.1,col="green",border=0)
-rect(0,0,SB0.sp,SB0.sp,col="yellow",border=0)
-if(KOBE.type!="ICCAT") rect(0,max(SP),SB0.sp,SB0.sp,col="orange",border=0)
-polygon(green.x,green.y,border = 0,col="green")
-polygon(red.x,red.y,border = 0,col="red")
-
-ry.sp = Bit[Bit<=Bmsy.sp]
-for(i in 1:length(ry.sp)){
+if(SP.plot!="phase"){
+  #-----------------------------------------
+  # Produce simple Production function plot
+  #-----------------------------------------
+  Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
+  png(file = paste0(output.dir,"/SP_",assessment,"_",Scenario,".png"), width = 5, height = 4.5, 
+      res = 200, units = "in")
+  par(Par)
+  Bit = seq(1,mean(posteriors$K),mean(posteriors$K)/500)
+  SP = mean(posteriors$r)/(m-1)*Bit*(1-(Bit/median(posteriors$K))^(m-1))  
+  B = apply(posteriors$SB,2,mean)
+  MSY = quantile(posteriors$MSY,c(0.025,0.5,0.975)) 
+  plot(Bit,SP,type = "n",ylim=c(0,max(c(max(Catch,na.rm=T),max(MSY*1.1)))),ylab=paste0("Surplus Production ",catch.metric),xlab="Biomass (t)")
+  polygon(c(-10000,10^7,10^7,-10000),c(rep(MSY[1],2),rep(MSY[3],2)),border = 0,col=grey(0.5,0.4))
+  lines(Bit,SP,col=2,lwd=2)
+  lines(B,Catch,lty=1)
+  points(B,Catch,cex=0.5,pch=4)
+  sel.yr = c(1,round(quantile(1:N,0.7),0),N)
+  points(B[sel.yr],Catch[sel.yr],col= 1,pch=c(22,21,24),bg="white",cex=1.5)
+  abline(h=max(SP),col=4)
+  sel.years = c(min(years),years[sel.yr[2]],max(years))
+  lines(rep(median(posteriors$SBmsy),2),c(-1000,max(SP)),lty=2,col=2)
+  legend('topright', 
+         c(expression(B[MSY]),"MSY","Catch",paste(sel.years)), 
+         lty=c(2,1,1,1,1,1),pch=c(-1,-1,4,22,21,24),pt.bg=c(0,0,0,rep("white",3)), 
+         col=c(2,4,rep(1,4)),lwd=1,cex=0.9,pt.cex=c(-1,-1,0.5,rep(1.3,3)),bty="n")
   
-  lines(rep(Bit[i],2),c(Cmsy[i],SP[i]),col=ifelse(i %% 2== 0,"yellow","red"),lty=3)  
-  #i = i+1
+  dev.off()
 }
 
-gy.sp = Bit[Bit>Bmsy.sp]
-for(i in (length(ry.sp)+1):length(Bit)){
+if(SP.plot=="phase"){
+  #-----------------------------------------
+  # Produce JABBA SP-phase plot
+  #-----------------------------------------
+  Par = list(mfrow=c(1,1),mar = c(3.5, 3.5, 0.1, 0.1), mgp =c(2.,0.5,0), tck = -0.02,cex=0.8)
+  png(file = paste0(output.dir,"/SPphase_",assessment,"_",Scenario,".png"), width = 5, height = 4.5, 
+      res = 200, units = "in")
+  par(Par)
+  Bit = seq(1,median(posteriors$K),median(posteriors$K)/500)
+  Cmsy = Bit*median(posteriors$Hmsy)
+  SP = median(posteriors$r)/(m-1)*Bit*(1-(Bit/median(posteriors$K))^(m-1))  
+  B = apply(posteriors$SB,2,mean)
+  MSY = quantile(posteriors$MSY,c(0.025,0.5,0.975)) 
+  Bmsy.sp = median(posteriors$SBmsy)
+  K.sp = median(posteriors$K)
+  green.x = c(max(Bit,B),max(Bit,B),Bmsy.sp,Bmsy.sp,max(Bit))
+  green.y = c(Bmsy.sp,0,0,max(SP),max(Cmsy))
+  red.x = c(0,0,Bmsy.sp,Bmsy.sp,0)
+  red.y = c(K.sp,0,max(SP),K.sp,K.sp)
+  plot(Bit,SP,type = "n",ylim=c(0,max(c(max(Catch,na.rm=T)*1.05,max(MSY*1.1)))),xlim=c(0,max(Bit,B)),ylab=paste0("Surplus Production ",catch.metric),xlab="Biomass (t)",xaxs="i",yaxs="i")
+  rect(0,0,K.sp*1.1,K.sp*1.1,col="green",border=0)
+  rect(0,0,K.sp,K.sp,col="yellow",border=0)
+  if(KOBE.type!="ICCAT") rect(0,max(SP),K.sp,K.sp,col="orange",border=0)
+  polygon(green.x,green.y,border = 0,col="green")
+  polygon(red.x,red.y,border = 0,col="red")
   
-  #lines(rep(Bit[i],2),c(max(SP),Cmsy[i]),col=ifelse(i %% 2== 0,ifelse(KOBE.type=="ICCAT","yellow","orange"),"green"),lty=3)  
-  #i = i+1
+  ry.sp = Bit[Bit<=Bmsy.sp]
+  for(i in 1:length(ry.sp)){
+    
+    lines(rep(Bit[i],2),c(Cmsy[i],SP[i]),col=ifelse(i %% 2== 0,"yellow","red"),lty=3)  
+    #i = i+1
+  }
+  
+  gy.sp = Bit[Bit>Bmsy.sp]
+  for(i in (length(ry.sp)+1):length(Bit)){
+    
+    #lines(rep(Bit[i],2),c(max(SP),Cmsy[i]),col=ifelse(i %% 2== 0,ifelse(KOBE.type=="ICCAT","yellow","orange"),"green"),lty=3)  
+    #i = i+1
+  }
+  
+  
+  polygon(c(-10000,10^7,10^7,-10000),c(rep(MSY[1],2),rep(MSY[3],2)),border = FALSE,col=rgb(0,0,1,0.4))
+  lines(Bit,SP,col=4,lwd=2)
+  lines(B,Catch,lty=1,lwd=1)
+  points(B,Catch,cex=0.8,pch=16)
+  lines(Bit,Cmsy,col=1,lwd=1,lty=2)
+  N=n.years
+  sel.yr = c(1,round(quantile(1:N,0.7),0),N)
+  points(B[sel.yr],Catch[sel.yr],col= 1,pch=c(22,21,24),bg="white",cex=1.7)
+  abline(h=max(SP),col=4,lty=5)
+  sel.years =years[sel.yr]
+  lines(rep(median(posteriors$SBmsy),2),c(-1000,max(SP)),lty=2,col=4)
+  
+  legend('topright', 
+         c(expression(B[MSY]),"MSY","SP","Catch",paste(sel.years)), 
+         lty=c(2,5,1,1,1,1,1),pch=c(-1,-1,-1,16,22,21,24),pt.bg=c(0,0,0,0,rep("white",3)), 
+         col=c(4,4,4,rep(1,4)),lwd=c(1,1,2,1,1,1),cex=0.8,pt.cex=c(-1,-1,-1,0.5,rep(1.3,3)),bty="n")
+  
+  dev.off()
 }
-
-
-polygon(c(-10000,10^7,10^7,-10000),c(rep(MSY.sp[1],2),rep(MSY.sp[3],2)),border = FALSE,col=rgb(0,0,1,0.4))
-lines(Bit,SP,col=4,lwd=2)
-lines(B,apply(Catch,1,sum),lty=1,lwd=1)
-points(B,apply(Catch,1,sum),cex=0.8,pch=16)
-#lines(Bit,Cmsy,col=1,lwd=1,lty=2)
-N=n.years
-sel.yr = c(1,round(quantile(1:N,0.7),0),N)
-points(B[sel.yr],apply(Catch,1,sum)[sel.yr],col= 1,pch=c(22,21,24),bg="white",cex=1.7)
-abline(h=max(SP),col=4,lty=5)
-sel.years =years[sel.yr]
-lines(rep(median(posteriors$SBmsy),2),c(-1000,max(SP)),lty=2,col=4)
-
-legend('topright', 
-       c(expression(B[MSY]),"MSY","SP","Catch",paste(sel.years)), 
-       lty=c(2,5,1,1,1,1,1),pch=c(-1,-1,-1,16,22,21,24),pt.bg=c(0,0,0,0,rep("white",3)), 
-       col=c(4,4,4,rep(1,4)),lwd=c(1,1,2,1,1,1),cex=0.8,pt.cex=c(-1,-1,-1,0.5,rep(1.3,3)),bty="n")
-
-dev.off()
-
-# save results
-SPphase = data.frame(Scenario,SB_i=round(Bit,1),SP=round(SP,1),Hmsy=round(Hmsy.sp,3),r=round(Hmsy.sp*(m-1)/(1-1/m),3),m=round(m,3),MSY=round(as.numeric(MSY.sp[2]),1),SB0=round(SB0.sp,1),Cmsy=round(Cmsy,1))
 
 
 #----------------------
@@ -1669,7 +1398,7 @@ if(KOBE.plot==TRUE){
   par(Par)
   
   #Create plot
-  plot(1000,1000,type="b", xlim=c(0,max(1/BmsyK,mu.b[2,]) +0.05), ylim=c(0,max(apply(HtoHmsy,2,quantile,c(0.5)),quantile(f,0.85),2.)),lty=3,ylab=ifelse(harvest.label=="Fmsy",expression(paste(F/F[MSY])),expression(paste(H/H[MSY]))),xlab=expression(paste(B/B[MSY])),xaxs="i",yaxs="i")
+  plot(1000,1000,type="b", xlim=c(0,2.5), ylim=c(0,max(apply(HtoHmsy,2,quantile,c(0.5)),quantile(f,0.85),2.)),lty=3,ylab=ifelse(harvest.label=="Fmsy",expression(paste(F/F[MSY])),expression(paste(H/H[MSY]))),xlab=expression(paste(B/B[MSY])),xaxs="i",yaxs="i")
   c1 <- c(-1,100)
   c2 <- c(1,1)
   
@@ -1687,7 +1416,6 @@ if(KOBE.plot==TRUE){
   polygon(kernelF$contours$"0.95",lty=2,border=NA,col="cornsilk4")
   polygon(kernelF$contours$"0.8",border=NA,lty=2,col="grey")
   polygon(kernelF$contours$"0.5",border=NA,lty=2,col="cornsilk2")
-  
   points(mu.b[2,],mu.f[2,],pch=16,cex=1)
   
   
@@ -1747,7 +1475,7 @@ if(Biplot==TRUE){
   par(Par)
   
   #Create plot
-  plot(1000,1000,type="b", ylim=c(0,1/BmsyK+0.05), xlim=c(0,max(apply(HtoHmsy,2,quantile,c(0.5)),quantile(f,0.85),2.)),lty=3,xaxs="i",yaxs="i")
+  plot(1000,1000,type="b", ylim=c(0,2.5), xlim=c(0,max(apply(HtoHmsy,2,quantile,c(0.5)),quantile(f,0.85),2.)),lty=3,xaxs="i",yaxs="i")
   
   # and fill areas using the polygon function
   fint = seq(0.001,100,0.01)
@@ -1808,12 +1536,9 @@ if(Biplot==TRUE){
       if(b[i]>bthreshold+(1.0-bthreshold)/ftarget*f[i]){
         Zone[i]<-X
       } else if(b[i]<bthreshold+(1.0-bthreshold)*f[i]){
-        Zone[i]<-Z
       } else {
         Zone[i]<-Y
       }
-      
-      
     }}
   
   perGreen = round(length(Zone[Zone==0.15])/length(Zone)*100,1) 
@@ -1860,7 +1585,7 @@ if(Projection ==TRUE){
   
   kjp = kobeJabbaProj(projections,proj.yrs[1])
   
-  save(kjp,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_projections.rdata"))
+  save(kjp,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_projections"))
   
   # Change here for ICCAT Bmsy plot
   Traj = cbind(posteriors$P[,(n.years):n.years],posteriors$prP[,,nTAC])
@@ -1889,38 +1614,23 @@ if(Projection ==TRUE){
   
 }
 
-#---------------------------------------------------------------------------------
-# Save core results
-#---------------------------------------------------------------------------------
-rownames(Stock_trj) = 1:nrow(Stock_trj)
-Stock.trj=data.frame(Scenario,Yr=years,Total.Catch=TC,data.frame(Stock_trj))
-jabba_out = list(Data=surplus.dat,Pars=results,Estimates=Table,Stock.trj=Stock.trj,Fits = jabba.res,ProcErrDev=procE.dev, SPphase=SPphase)
-save(jabba_out, file=paste0(output.dir,"/jabbaout_",assessment,"_",Scenario,".RData"))  
-cat(paste0("\n","Scenario ",Mod.names,"_",Scenario," - DONE!","\n"))
-#---------------------------------------------------------------------------------
-#compile jabba2FRL
 
-if(jabba2FRL==TRUE & CatchOnly==FALSE){
-  #---------------------------------------------------------------------------------
-  # Define elements
-  timeseries = data.frame(factor=assessment,level=Scenario,year=years,area=1,season=1,biomass=NA,ssb=Stock.trj$Bt.Median,rec=NA,catch=TC,proc.dev=proc.dev[2,])
-  refpts = data.frame(factor=assessment,level=Scenario,quant = c("hat","var"), k=c(median(posteriors$K),var(posteriors$K)),bmsy=c(median(posteriors$SBmsy),var(posteriors$SBmsy)),
-                      fmsy=c(median(posteriors$Hmsy.y[,length(years)]),var(posteriors$Hmsy)),msy=c(median(posteriors$SBmsy*posteriors$Hmsy),var(posteriors$SBmsy*posteriors$Hmsy))) 
+if(save.trajectories==TRUE){
+  cat(paste0("\n","><> Saving Posteriors of FRP trajectories <><","\n"))
   
-  pfunc = data.frame(factor=assessment,level=Scenario, k=median(posteriors$K),r=median(posteriors$r),p = m-1,shape=median(posteriors$SBmsy)/median(posteriors$K),m)          
-  curves=data.frame(factor=assessment,level=Scenario,ssb=SPphase$SB_i,yield=SPphase$SP)                   
-  dgs = data.frame(factor=assessment,level=Scenario,name=jabba.res$name,year=jabba.res$year,season=1,obs=jabba.res$obs,hat=jabba.res$hat,hat.lci=jabba.res$hat.lci,hat.uci=jabba.res$hat.uci,residual=jabba.res$residual,tails=jabba.res$tails)
-  jb = list(timeseries=timeseries,refpts=refpts,pfunc=pfunc,ts2=NULL,curves=curves,dgs=dgs)
-  save(jb,file=paste0(output.dir,"/jb.",Scenario,".Rdata"))
+  # FRP trajectories
+  trajectories = array(NA,c(nsaved,n.years,3))
+  trajectories[,,1] = posteriors$P 
+  trajectories[,,2] = posteriors$BtoBmsy 
+  trajectories[,,3] = posteriors$HtoHmsy
+  
+  kb=kobeJabba(trajectories,years[1])
+  save(kb,file=paste0(output.dir,"/",assessment,"_",Mod.names,"_",Scenario,"_trajectories"))
+  
 }
-#---------------------------------------------------------------------------------
+
 
 cat(paste0("\n","\n","><> Scenario ",Mod.names,"_",Scenario," for ",assessment," - DONE! <><","\n"))
-
-# END OF CODE
-
-
-
 
 
 
