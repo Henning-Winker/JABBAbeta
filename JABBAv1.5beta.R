@@ -447,7 +447,6 @@ kobeJabbaProj<-function(x,minyear=1,tac=NULL){
   out}
 
 #----------------------------------------------------
-# Determine initial ranges for r
 #----------------------------------------------------
 if(r.dist=="range"){
   # initial range of r based on resilience (FishBase.org)
